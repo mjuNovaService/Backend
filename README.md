@@ -49,7 +49,7 @@ docker ps          # nova-mysql 이 Up 상태인지 확인
 
 - MySQL 8.0 / 포트 **3307** (로컬 MySQL과 충돌 방지)
 - DB명 `nova` / 계정 `root` / 비밀번호 `root1234`
-- 로컬 개발 전용 계정입니다. 실서버 접속 정보는 절대 커밋하지 않습니다.
+- 로컬 개발 전용 계정입니다. 실서버 접속 정보는 커밋X
 
 접속 확인:
 
@@ -75,7 +75,7 @@ docker exec -it nova-mysql mysql -uroot -proot1234 -e "show databases;"
 | OpenAPI JSON | http://localhost:8080/v3/api-docs |
 | 헬스체크 | http://localhost:8080/health |
 
-Gradle은 wrapper를 사용합니다. 별도 설치 없이 항상 `./gradlew` 로 실행하세요.
+Gradle은 wrapper를 사용합니다. 별도 설치 없이 항상 `./gradlew` 로 실행.
 
 ## 프로젝트 구조
 
@@ -100,7 +100,7 @@ com.mju.nova.backend
 |---|---|
 | presentation | HTTP 요청/응답만 담당. 비즈니스 로직 금지 |
 | application | 유스케이스 흐름 조립, `@Transactional` 경계. 판단은 domain에 위임 |
-| domain | 비즈니스 규칙 그 자체. Entity가 자기 상태를 스스로 지킴 |
+| domain | 비즈니스 규칙. Entity가 자기 상태를 스스로 지킴 |
 | infrastructure | DB, 외부 API, 메일 등 기술적 세부사항 |
 
 의존성 방향: `presentation → application → domain ← infrastructure`
@@ -126,7 +126,7 @@ java -jar build/libs/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 
 ### 공통 응답
 
-모든 API는 `ApiResponse` 로 감싸서 반환합니다.
+모든 API는 `ApiResponse` 로 감싸서 반환.
 
 ```java
 @GetMapping("/api/rentals/{id}")
@@ -144,14 +144,14 @@ public ApiResponse<RentalResponse> findOne(@PathVariable Long id) {
 
 ### 예외 처리
 
-컨트롤러에서 try-catch 하지 않습니다. `BusinessException` 을 던지면 `GlobalExceptionHandler` 가 처리합니다.
+컨트롤러에서 try-catch X. `BusinessException` 을 던지면 `GlobalExceptionHandler` 가 처리.
 
 ```java
 Rental rental = rentalRepository.findById(id)
         .orElseThrow(() -> new BusinessException(ErrorCode.RENTAL_NOT_FOUND));
 ```
 
-새 에러는 `ErrorCode` enum에 추가합니다. 코드 접두어는 도메인별로 구분합니다.
+새 에러는 `ErrorCode` enum에 추가. 코드 접두어는 도메인별로 구분.
 
 | 접두어 | 영역 |
 |---|---|
@@ -214,7 +214,7 @@ git push origin feature/rental-create
 # → GitHub에서 PR 생성 → 리뷰 → main에 merge
 ```
 
-`main` 에 직접 push 하지 않습니다.
+`main` 에 직접 push X.
 
 ### 커밋 메시지
 
@@ -240,8 +240,4 @@ test: 대여 신청 단위 테스트 추가
 
 ## 참고
 
-Spring Boot **4.x** 기준입니다. 국내 자료 대부분은 3.x 기준이라 설정 문법이 다를 수 있으니, 검색 시 `spring boot 4` 키워드를 함께 쓰세요.
-
-- Spring Security 설정 방식이 3.x와 다릅니다
-- Hibernate 7 기준이라 일부 어노테이션 사용법이 변경되었습니다
-- springdoc은 Boot MAJOR 버전에 맞춥니다 (Boot 4 → springdoc 3)
+Spring Boot **4.x** 기준.
