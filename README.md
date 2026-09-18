@@ -7,7 +7,7 @@
 - Java 21
 - Spring Boot 4.1.1
 - Spring Data JPA (Hibernate 7)
-- MySQL 8.0
+- PostgreSQL 16
 - Gradle
 - Springdoc OpenAPI (Swagger)
 
@@ -15,8 +15,8 @@
 
 ### 1. 사전 준비
 
-- **JDK 21** 설치 (필수 — 다른 버전은 빌드 실패)
-- **Docker Desktop** 설치 및 실행
+- **JDK 21** (없으면 Gradle이 자동으로 받아옵니다)
+- **Docker Desktop** 설치 후 앱을 한 번 실행 — 메뉴바 고래 아이콘이 떠 있어야 합니다!
 - IntelliJ IDEA
 
 JDK 확인:
@@ -33,7 +33,7 @@ echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### 2. 클론
+### 2. 클론docker compose up -d
 
 ```bash
 git clone https://github.com/mjuNovaService/Backend.git
@@ -44,17 +44,17 @@ cd Backend
 
 ```bash
 docker compose up -d
-docker ps          # nova-mysql 이 Up 상태인지 확인
+docker ps          # nova-postgres 가 (healthy) 될 때까지 대기 (첫 실행 30초 정도)
 ```
 
-- MySQL 8.0 / 포트 **3307** (로컬 MySQL과 충돌 방지)
-- DB명 `nova` / 계정 `root` / 비밀번호 `root1234`
+- PostgreSQL 16 / 포트 **5433** (로컬 PostgreSQL과 충돌 방지)
+- DB명 `nova` / 계정 `nova` / 비밀번호 `root1234`
 - 로컬 개발 전용 계정입니다. 실서버 접속 정보는 커밋X
 
 접속 확인:
 
 ```bash
-docker exec -it nova-mysql mysql -uroot -proot1234 -e "show databases;"
+docker exec -it nova-postgres psql -U nova -d nova -c "\l"
 ```
 
 ### 4. IntelliJ 설정
@@ -229,15 +229,16 @@ test: 대여 신청 단위 테스트 추가
 
 ## 트러블슈팅
 
-| 증상 | 원인 / 해결 |
-|---|---|
-| `Unsupported class file major version` | JDK 버전 불일치 → Gradle JVM을 21로 변경 |
-| getter를 못 찾는 컴파일 에러 | Lombok → Annotation processing 활성화 |
-| `permission denied: ./gradlew` | `chmod +x gradlew` |
-| `Communications link failure` | `docker ps` 로 컨테이너 확인 후 `docker compose up -d` |
-| `Failed to determine a suitable driver class` | 프로필 미적용 → `application.yaml` 확인 |
-| 스키마가 꼬였을 때 | `docker compose down -v && docker compose up -d` (데이터 전부 삭제됨) |
+| 증상                                           | 원인 / 해결                                                      |
+|----------------------------------------------|--------------------------------------------------------------|
+| `Unsupported class file major version`       | JDK 버전 불일치 → Gradle JVM을 21로 변경                              |
+| getter를 못 찾는 컴파일 에러                          | Lombok → Annotation processing 활성화                           |
+| `permission denied: ./gradlew`               | `chmod +x gradlew`                                           |
+| `Connection refused` | `docker ps` 에서 `(healthy)` 인지 확인 |
+| `Failed to determine a suitable driver class` | 프로필 미적용 → `application.yaml` 확인                              |
+| 스키마가 꼬였을 때                                   | `docker compose down -v && docker compose up -d` (데이터 전부 삭제됨) |
 
 ## 참고
 
 Spring Boot **4.x** 기준.
+DB는 PostgreSQL 16 기준. MySQL에서 전환됨.
