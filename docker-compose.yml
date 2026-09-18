@@ -1,18 +1,21 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: nova-mysql
+  postgres:
+    image: postgres:16
+    container_name: nova-postgres
     ports:
-      - "3307:3306"
+      - "5433:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: root1234
-      MYSQL_DATABASE: nova
+      POSTGRES_PASSWORD: root1234
+      POSTGRES_DB: nova
+      POSTGRES_USER: nova
       TZ: Asia/Seoul
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nova -d nova"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
-      - nova-mysql-data:/var/lib/mysql
+      - nova-postgres-data:/var/lib/postgresql/data
 
 volumes:
-  nova-mysql-data:
+  nova-postgres-data:
