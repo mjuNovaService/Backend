@@ -1,0 +1,584 @@
+// ═══════════════════════════════════════════════════════════════
+// NOVA 대여 서비스 ERD(2026-09-22)
+// ═══════════════════════════════════════════════════════════════
+
+
+Project nova {
+  database_type: 'PostgreSQL'
+  Note: '''
+  # NOVA 대여 서비스 ERD
+
+  인공지능소프트웨어융합대학 학생회의 물품 대여·사물함 대여 서비스 데이터 구조입니다.
+  이용 대상은 **단과대 소속 5개 학과 재학생**이며, 가입할 때 학교 이메일(@mju.ac.kr) 인증 + 비밀번호 설정, 재학증명서(학과 확인)를 거쳐야 서비스를 쓸 수 있습니다.
+  가입 후에는 이메일 + 비밀번호로 로그인합니다.
+
+  ## 4개 패키지 (도메인별로 코드를 나누는 단위)
+  - **member** : 회원 가입, 이메일 인증, 로그인(이메일 + 비밀번호), 재학(학과) 인증
+  - **rental** : 물품 대여 — 보관함에서 학생이 직접 꺼내고 반납, 운영진은 하루 마감에 개수 확인
+  - **locker** : 사물함 대여 — 학기 단위 선착순 배정, 학기가 끝나면 짐을 빼고 초기화
+  - **council** : 학생회 정보, 공약, 학생회칙·FAQ
+
+  ## 모든 테이블 공통 규칙
+  - `id` : 의미 없는 자동 증가 번호(bigint). 이메일·학번처럼 현실 값은 입력 실수로 고칠 일이 생기고, PK는 다른 테이블 FK로 퍼져 있어 고치기 어렵기 때문에 PK로 쓰지 않습니다.
+  - `created_at`, `updated_at` : 생성·수정 시각. 코드에서 BaseEntity를 상속하면 자동으로 채워집니다.
+  - 상태값(`status`, `type`, `role`, `method`)은 문자열로 저장. Java에서는 Enum으로 다루고 `@Enumerated(EnumType.STRING)`을 씁니다.
+  - 시각은 `timestamp`, 날짜만 의미 있으면 `date`.
+  - 시간대는 서울(Asia/Seoul) 기준. 서버·DB·JVM 설정을 모두 맞춥니다. 반납 기한·알림·신청 기간이 전부 시각 기준이라 어긋나면 9시간씩 틀어집니다.
+  - null 허용 컬럼은 대부분 “아직 일어나지 않은 일”을 뜻합니다. (예: 반납 시각이 비어 있음 = 아직 반납 안 함)
+
+  ## 인덱스·유니크 제약
+  - 인덱스는 걸지 않았습니다. 구현 후 상황을 보고 추가할 예정.
+  - 여러 칸을 묶은 유니크 제약(중복 금지 규칙)은 보류 상태로, 각 테이블 설명에 규칙만 적어두었습니다.
+  - 한 칸짜리 unique(email, student_id, locker.number 등)는 유지했습니다.
+
+  ## 패키지 사이 참조 규칙 (DDD)
+  - 같은 패키지 안: 코드에서 객체로 직접 참조 허용 (예: Item → ItemCategory)
+  - 다른 패키지 사이: 코드에서는 ID 숫자만 보관 (예: Rental은 Member 객체 대신 memberId만)
+  - DB의 FK는 두 경우 모두 그대로 유지.
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// member 패키지 — 회원 · 인증
+// ═══════════════════════════════════════════════════════════════
+
+Table member {
+  id bigint [pk, increment, note: '회원 고유 번호. 변하지 X']
+  email varchar(100) [not null, unique, note: '학교 이메일. @mju.ac.kr 주소만 가입 가능. 로그인 아이디 역할. 같은 이메일로 계정 두 개 불가']
+  password_hash varchar(100) [not null, note: '로그인 비밀번호를 해시(BCrypt)로 바꾼 값. 원래 비밀번호는 저장 X. 로그인할 때 입력한 비밀번호와 이 값을 비교. 관리자도 원래 비밀번호를 볼 수 없음']
+  student_id varchar(20) [unique, note: '학번. 이메일 인증 후 학생이 직접 입력(P7-b). 입력 전까지 비어 있음. 이미 가입된 학번은 입력 단계에서 거절']
+  name varchar(50) [note: '이름. 이메일 인증 후 학생이 직접 입력(P7-b). 입력 전까지 비어 있음']
+  department varchar(50) [note: '학과. 학생이 입력하지 않고, 재학증명서를 OCR로 읽어서 확인된 값만 들어감. 인증 전까지 비어 있음']
+  privacy_agreed_at timestamp [note: '개인정보(재학증명서) 수집·이용에 동의한 시각. 재학증명서를 올리기 전에 반드시 동의해야 함']
+  verified_at timestamp [note: '재학 인증이 끝난 시각. 비어 있으면 미인증 → 물품 대여·사물함 신청 불가. 재인증은 하지 않음 (한 번 인증하면 유지)']
+  role varchar(20) [not null, note: 'STUDENT(학생) | ADMIN(운영진). 운영진도 단과대 재학생이라 같은 테이블에서 역할로만 구분']
+  created_at timestamp [not null, note: '계정이 만들어진 시각 = 이메일 인증 + 비밀번호 설정을 마친 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 회원 한 명당 한 줄
+
+  학생과 운영진을 모두 담습니다. 가입은 4단계이고, 단계마다 이 테이블의 칸이 채워지는 형식.
+
+  | 단계 | 학생 행동 | 채워지는 칸 |
+  |---|---|---|
+  | 1 | 학교 이메일로 인증코드 확인 + 비밀번호 설정 | email, password_hash, role, created_at (행 생성) |
+  | 2 | 학번·이름 직접 입력 | student_id, name |
+  | 3 | 개인정보 동의 | privacy_agreed_at |
+  | 4 | 재학증명서 승인 | department, verified_at |
+
+  - 가입 후 로그인은 이메일 + 비밀번호로. 인증코드는 가입할 때 한 번만 사용.
+  - 1단계만 끝난 상태에서도 로그인은 되지만, verified_at이 비어 있으면 물품·사물함 신청은 막힘.
+  - 학번·이름은 자신이 작성하는 방식이라 오타나 타인 학번 입력이 생길 수 있음. 진짜 주인이 “이미 가입된 학번”으로 막히면 운영진이 관리 화면에서 수정할 수 있도록 설계.
+  - student_id가 unique인데 비어 있는 행이 여러 개여도 문제 없습니다. PostgreSQL에서 비어 있는 값(null)끼리는 중복으로 처리 X.
+
+  ### 비밀번호 저장 방식
+  - 해시(BCrypt)로 저장. 되돌릴 수 없는 방식이라 DB가 유출돼도 원래 비밀번호를 알 수 없음.
+  - 로그인할 때는 입력한 비밀번호를 같은 방식으로 해시해서 저장된 값과 “맞는지”만 비교.
+  - 사물함 비밀번호(양방향 암호화)와 다른 이유: 로그인 비밀번호는 관리자를 포함해 누구도 원래 값을 볼 필요가 없음.
+  - 비밀번호를 잊으면 관리자도 알려줄 수 없어서, 이메일 인증을 다시 거쳐 새 비밀번호로 바꾸는 방식이 필요. !비밀번호 찾기(재설정) 기능 여부 의논 필요!
+  '''
+}
+
+Table allowed_department {
+  id bigint [pk, increment, note: '학과 고유 번호']
+  name varchar(50) [not null, unique, note: '허용 학과명. OCR이 재학증명서에서 읽은 글자와 그대로 비교하므로 증명서에 찍히는 표기와 똑같이 저장']
+  is_active boolean [not null, default: true, note: '지금 인정하는 학과인지. 학과 개편 시 행을 지우지 않고 false로 바꿈']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 우리 단과대 학과 목록 (현재 5개)
+
+  재학증명서에서 읽은 학과가 이 목록(is_active = true)에 있으면 인증 통과, 없으면 반려.
+
+  - 코드에 적어두지 않고 테이블로 둔 이유: 학과 개편이 있을 때 개발자가 코드를 고치고 다시 배포할 필요 없이, 운영진이 화면에서 바꾸면 됩니다.
+  - 삭제 대신 비활성화하는 이유: 예전에 그 학과로 인증받은 학생 기록이 설명될 수 있도록 남김.
+  - 다른 테이블과 FK로 연결하지 않고, 인증할 때 학과명 글자로 조회만.
+  '''
+}
+
+Table enrollment_verification {
+  id bigint [pk, increment, note: '인증 신청 고유 번호']
+  member_id bigint [not null, note: '재학증명서를 올린 회원 (member.id)']
+  image_key varchar(500) [note: 'S3에 저장한 이미지 위치(예: verifications/aaa.jpg). 관리자 확인이 필요한 PENDING 건만 값이 있음. 관리자가 처리하면 S3 파일을 지우고 다시 비움']
+  ocr_department varchar(50) [note: 'OCR이 재학증명서에서 읽은 학과. 인증에 쓰는 유일한 값. 못 읽었으면 비어 있음']
+  status varchar(20) [not null, note: 'APPROVED(승인) | PENDING(관리자 확인 대기) | REJECTED(반려)']
+  method varchar(20) [note: 'OCR_AUTO(시스템이 자동 처리) | MANUAL(관리자가 직접 처리). PENDING 상태에서는 비어 있음']
+  reject_reason varchar(200) [note: '반려 사유. 학생에게 보여줄 문구. 현재는 “인식 불가” 하나로 운영.']
+  reviewed_by bigint [note: '직접 처리한 운영진 (member.id). 시스템 자동 처리면 비어 있음']
+  reviewed_at timestamp [note: '승인 또는 반려된 시각']
+  created_at timestamp [not null, note: '재학증명서를 올린 시각']
+
+  Note: '''
+  ## 재학증명서를 올릴 때마다 한 줄 (학과 확인용)
+
+  학번·이름은 학생이 직접 입력하고, 이 테이블은 **우리 단과대 학과인지**만 확인.
+
+  ### 처리 흐름
+  1. 학생이 재학증명서 이미지를 올림 → 서버가 메모리에서 바로 OCR로 글자를 읽음 (이 단계에서는 S3에 저장하지 않음)
+  2. 판정
+     - 학과를 읽었고 allowed_department에 있음 → APPROVED (자동)
+     - 학과를 읽었는데 allowed_department에 없음 → REJECTED (자동)
+     - 학과를 못 읽음 / 목록과 글자가 조금 다름(오인식 의심) → 이미지를 S3에 저장 → PENDING
+  3. 운영진이 PENDING 건의 이미지를 보고 승인 또는 반려(“인식 불가”) → S3 파일 삭제 → image_key 비움
+  4. 승인되면 ocr_department(또는 운영진이 확인한 학과)를 member.department로 복사하고 member.verified_at 기록
+
+  ### 설계 이유
+  - 반려되면 다시 올릴 수 있어서 한 회원에 여러 줄이 생깁니다(1:N). member에 칸 하나만 두면 마지막 결과만 남아 반려 기록이 사라지는 문제가 발생함.
+  - 자동 처리된 건은 이미지를 저장 X. 재학증명서에는 개인정보가 있어서, 사람이 봐야 하는 건만 잠깐 보관하고 삭제되는 방식 채택.
+  - image_key에 값이 있는 행 = 지금 운영진 확인을 기다리는 상태.
+  - 증명서의 학번·이름과 입력값은 대조하지 않으므로, 다른 사람의 증명서로도 학과 인증은 통과할 수 있습니다. 서비스 규모상 위조·도용은 고려하지 않고 설계했습니다.
+  '''
+}
+
+Table email_verification {
+  id bigint [pk, increment, note: '인증 요청 고유 번호']
+  email varchar(100) [not null, note: '인증코드를 보낸 학교 이메일 주소']
+  code_hash varchar(100) [not null, note: '인증코드를 해시로 바꾼 값. 원래 코드(예: 482913)는 저장하지 않음. 학생이 입력한 코드도 해시해서 이 값과 같은지 비교']
+  expires_at timestamp [not null, note: '코드 만료 시각. 발송 후 5분(피그마 P7 기준). 지나면 코드 무효']
+  last_sent_at timestamp [not null, note: '마지막으로 코드를 보낸 시각. 너무 자주 재발송하지 못하게 막는 데 사용 (예: 1분 이내 재발송 금지)']
+  verified_at timestamp [note: '코드를 맞힌 시각. 값이 있으면 이미 사용한 코드라 다시 쓸 수 없음']
+  created_at timestamp [not null, note: '처음 요청한 시각']
+
+  Note: '''
+  ## 회원가입 인증코드 임시 보관함
+
+  회원가입할 때 학생이 학교 이메일을 입력하면 6자리 코드를 메일로 보내고, 여기에 적어놓음.
+  가입 후 로그인은 이메일 + 비밀번호로 하므로, 인증코드는 가입할 때만 사용.
+
+  ### 흐름
+  1. 이메일 입력 → @mju.ac.kr 인지 확인 (아니면 코드를 보내기 전에 거절). 이미 가입된 이메일이면 “이미 가입된 계정” 안내
+  2. 코드 생성 → 해시로 바꿔 저장 → 원래 코드는 메일로만 발송
+  3. 학생이 코드 입력 → 해시해서 비교 → 맞고 만료 전이면 verified_at 기록
+  4. 비밀번호 입력 → 해시로 바꿔서 member 생성 (email, password_hash)
+
+  ### 설계 이유
+  - member와 FK가 없는 이유: 코드를 맞히고 비밀번호까지 정해야 계정이 생기므로, 코드를 보낼 때는 아직 가리킬 회원이 없음.
+  - 해시로 저장하는 이유: DB 조회 화면이나 로그에 코드가 그대로 보이지 않게 하려는 보안 목적.
+  - 5분 만료와 재발송 간격으로 제한.
+  - 비밀번호 찾기 기능을 만들게 되면, 같은 방식(이메일로 코드 발송 → 확인 후 새 비밀번호 설정)으로 이 테이블을 재사용 가능.
+  - 몇 분 지나면 쓸모없는 데이터라, 나중에 Redis(자동 만료 저장소)로 옮기면 이 테이블은 사라짐. 저장소 미정
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// rental 패키지 — 물품 대여 (보관함 셀프 수령·반납)
+// ═══════════════════════════════════════════════════════════════
+
+Table item_category {
+  id bigint [pk, increment, note: '카테고리 고유 번호']
+  name varchar(50) [not null, note: '물품 목록 상단 탭 이름 (예: 충전기, 우산, 문구, 기타)']
+  display_order int [not null, note: '탭이 화면에 보이는 순서. 숫자가 작을수록 앞']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 물품 목록 상단의 탭
+
+  학생이 물품을 **찾는 기준**입니다. 물품이 실제로 어디 있는지(보관함)와는 별개.
+
+  - 테이블로 둔 이유: 운영진이 화면에서 탭을 추가·수정할 수 있게 설계. 코드에 고정하면 탭 하나 늘릴 때마다 재배포가 필요.
+  - 대여 기간은 여기가 아니라 item에 있습니다. 같은 탭 안에서도 물품마다 기간이 다를 수 있기 때문입니다.
+  '''
+}
+
+Table item_storage {
+  id bigint [pk, increment, note: '보관함 고유 번호']
+  name varchar(50) [not null, note: '보관함 이름 (예: 대여 보관함 A)']
+  location varchar(100) [not null, note: '보관함 위치. 대여 신청 후 학생에게 안내 (예: 3층 학생회실 앞)']
+  password varchar(20) [not null, note: '보관함 비밀번호. 대여 신청이 끝나면 학생에게 보여줌. 공유하는 값이라 평문 저장']
+  password_updated_at timestamp [not null, note: '비밀번호를 마지막으로 바꾼 시각. 교체 주기 관리용']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 대여 물품을 넣어두는 비밀번호 보관함
+
+  사람이 물품을 건네주지 않고, 학생이 보관함을 열어 직접 꺼내고 다시 넣는 방식이라 필요.
+  EX) 대여 신청을 하면 “대여 보관함 A (3층 학생회실 앞), 비밀번호 4821”처럼 안내.
+
+  ### 설계 이유
+  - item과 분리한 이유: 여러 물품이 한 보관함을 같이 씁니다. 물품마다 비밀번호 칸을 두면 비밀번호를 바꿀 때 물품을 전부 고쳐야 하고, 하나라도 빠뜨리면 틀린 비밀번호가 안내됨.
+    -각 물품 어떤 식으로 배치할지 의논이 필요해 보입니다.
+  - 평문 저장 이유: 빌리는 학생에게 보여줘야 하는 값이라 숨길 이유가 없다고 판단했습니다.
+  - 대신 한 번 빌린 사람은 비밀번호를 계속 알게 되므로, password_updated_at을 보고 주기적으로 교체가 필요할 수 있음. 
+  '''
+}
+
+Table item {
+  id bigint [pk, increment, note: '물품 고유 번호']
+  category_id bigint [not null, note: '어느 탭에 보이는지 (item_category.id)']
+  storage_id bigint [not null, note: '어느 보관함에 들어 있는지 (item_storage.id). category_id와는 다른 테이블의 번호']
+  name varchar(100) [not null, note: '물품 이름 (예: C타입 충전기)']
+  total_quantity int [not null, note: '전체 수량. 화면 3/5 에서 5']
+  available_quantity int [not null, note: '지금 보관함에 있어야 할 수량. 화면 3/5 에서 3. 대여 시 1 감소, 반납 시 1 증가. 0이면 “대여 불가” 표시']
+  rental_days int [not null, note: '대여 가능 기간(일). 물품마다 다름. 0이면 당일 반납. 값을 바꾸면 그 뒤 대여부터 적용되고, 이미 빌려간 건은 그대로. !반납 기한 계산 방식 미정 — 아래 Note 참고']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 빌릴 수 있는 물품 종류 하나당 한 줄
+
+  충전기가 5개 있어도 줄은 1개입니다. “몇 개 남았는지”만 관리하고, 어느 충전기가 누구에게 갔는지는 추적하지 X.
+
+  ### 재고 표시
+  - 화면의 3/5 는 available_quantity / total_quantity 입니다.
+  - available_quantity가 0이면 흐리게 “대여 불가”로 표시.
+
+  ### 대여 기간 예시 (rental_days, 월요일에 빌린 경우)
+  | rental_days | 반납 기한 |
+  |---|---|
+  | 0 | 당일 18:00 |
+  | 2 | 수요일 18:00 |
+  반납 마감 시각(18:00)은 설정값으로 둡니다.  기간을 “일” 단위로만 쓸지 의논이 필요해 보입니다. + 우선 반납 시각을 설정해놨는데 이것 또한 의논이 필요. (시간 단위가 필요해지면 구조 변경)
+
+  ### 반납 기한 계산 방식 미정 (기획 확정 전)
+  물품마다 반납 기한을 다르게 할 예정이지만, 어떤 방식인지는 아직 정해지지 않았습니다.
+  지금의 rental_days는 임시 컬럼이며, 결정에 따라 아래 둘 중 하나로 바뀝니다.
+
+  | 방식 | 예시 | 컬럼 | 기한 계산 |
+  |---|---|---|---|
+  | A. 마감 시각이 물품마다 다름 | 충전기 당일 18시, 우산 다음 날 12시 | rental_days + return_time(time) | 빌린 날짜 + rental_days일의 return_time |
+  | B. 빌린 시점부터 몇 시간 | 충전기 4시간, 담요 24시간 | rental_hours(int) 하나 | 빌린 시각 + rental_hours |
+
+  - A는 마감 시각 이후에 빌리면 곧바로 연체가 되는 문제가 있어, “마감 이후 대여는 하루 뒤로” 같은 규칙이 추가로 필요.
+  - B는 그 문제가 없지만 기한이 애매한 시각(새벽 등)이 될 수 있음.
+  - 어느 쪽이든 rental.due_at은 빌리는 순간 계산해서 저장하므로 rental 테이블은 바뀌지 X.
+
+  ### 분실 · 파손 · 고장
+  - 물품을 따로 “사용 불가”로 표시하지 않고, 운영진이 수량 자체를 줄입니다.
+  - total_quantity와 available_quantity를 함께 1씩 줄임 (예: 3/5 → 2/4)
+  - 모두 없어져 0/0이 되어도 행은 지우지 않고 “대여 불가”로 표시. 지난 대여 기록이 이 물품을 가리키고 있어서 삭제할 수 없음.
+  - 하루 마감 확인(inventory_check)에서 개수가 부족한 원인이 분실로 확인되면 이 방법으로 정리.
+
+  ### 마지막 1개를 두 명이 동시에 신청하면
+  “1 이상일 때만 1 빼기” 조건을 건 UPDATE 한 번으로 처리. DB가 한 번에 하나씩 처리하므로 먼저 온 요청만 성공하고, 뒤의 요청은 아무것도 바뀌지 않아 “재고 소진” 안내를 띄움. 유니크 제약 없이도 동작 O.
+  '''
+}
+
+Table rental {
+  id bigint [pk, increment, note: '대여 고유 번호']
+  member_id bigint [not null, note: '빌린 회원 (member.id). 다른 패키지라 코드에서는 번호만 보관']
+  item_id bigint [not null, note: '빌린 물품 (item.id)']
+  purpose varchar(200) [note: '용도 (선택 입력). 예: 강의 중 노트북 충전']
+  status varchar(20) [not null, note: 'RENTED(대여중) | RETURNED(반납완료). 연체는 저장하지 않고 계산']
+  rented_at timestamp [not null, note: '빌린 시각. 셀프 수령이라 신청하는 순간이 곧 대여 시작']
+  due_at timestamp [not null, note: '반납해야 하는 시각(예정). 빌리는 순간 item의 대여 기간 규칙으로 계산해서 고정 저장 (계산 방식은 item Note 참고)']
+  returned_at timestamp [note: '반납 처리된 시각. 학생이 반납 버튼을 누른 시각, 또는 운영진이 대신 처리한 시각. 연체 판정 기준. 비어 있으면 아직 반납 안 함']
+  return_processed_by bigint [note: '학생이 반납 버튼을 깜빡해서 운영진이 대신 반납 처리한 경우 그 운영진 (member.id). 학생 본인 처리면 비어 있음. 이 경우 returned_at은 운영진 처리 시각']
+  created_at timestamp [not null, note: '생성 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 대여 한 건의 시작부터 반납까지 (가장 중요한 테이블)
+
+  ### 흐름
+  1. 학생이 대여 신청 → 이 테이블에 RENTED로 한 줄 생성, item.available_quantity 1 감소
+     - 같은 물품을 이미 대여중(RENTED)이면 신청 불가. 다른 물품은 동시에 빌릴 수 있음 (예: 충전기 + 담요 + 우산 O, 충전기 2개 X)
+  2. 보관함 위치·비밀번호 안내 → 학생이 직접 꺼내감
+  3. 기한 전 알림 메일 (notification_log)
+  4. 학생이 보관함에 넣고 앱에서 “반납하기” → RETURNED, returned_at 기록, item.available_quantity 1 증가
+     - 신청만 하고 꺼내가지 않은 경우(취소)도 반납하기로 처리. 별도 취소 상태는 두지 않음
+  5. 보관함에 넣고 반납하기를 안 누른 경우 → 운영진이 하루 마감 확인 때 대신 반납 처리 (return_processed_by 기록)
+     - 이때 returned_at은 운영진이 처리한 시각. 그 시각이 due_at보다 늦으면 연체로 남음 (버튼을 안 누른 책임은 학생)
+
+  ### due_at 과 returned_at 은 다른 값
+  | 컬럼 | 뜻 | 언제 채워지나 |
+  |---|---|---|
+  | due_at | 반납해야 하는 시각 | 빌리는 순간 자동 계산 |
+  | returned_at | 실제로 반납한 시각 | 반납 버튼을 누를 때 |
+
+  ### 설계 이유
+  - due_at을 저장하는 이유: 빌린 순간의 규칙으로 기한을 고정하기를 위함. 운영진이 나중에 대여 기간을 바꿔도 이미 빌려간 사람의 기한은 바뀌지 X. 마이페이지 D-day와 알림 메일도 이 값을 사용.
+  - 연체를 저장하지 않는 이유: status = RENTED 이고 due_at이 지났으면 연체라고 계산 가능. 저장하면 매일 상태를 바꿔주는 작업이 따로 필요.
+  - 이 조건(RENTED + 기한 지남)이 곧 **미반납자 목록**이라, 운영진이 연락할 대상을 바로 확인 가능.
+  - 상태 변경은 엔티티 메서드(예: 반납하기)로만 합니다. 학생 반납과 운영진 대리 반납 두 경로가 같은 규칙(대여중일 때만 반납 가능)을 거치게 하기 위해서입니다.
+  - 회원과 물품 사이의 “여러 명 : 여러 물품” 관계를 풀어낸 테이블이기도 합니다.
+  - 한 번에 1개씩만 빌리므로 수량 칸이 없습니다. 한 줄 = 물품 1개
+
+  ### 같은 물품 중복 대여 금지  !유니크 제약 보류!
+  - 규칙: 한 회원이 같은 물품을 RENTED 상태로 두 줄 가질 수 없음
+  - 확실히 막으려면 status = RENTED 인 행만 대상으로 하는 (member_id, item_id) 부분 유니크 제약이 필요 (반납 후 다시 빌릴 수 있도록)
+  - 그전까지 코드에서 “이 물품 대여중인지” 조회 후 저장
+  '''
+}
+
+Table notification_log {
+  id bigint [pk, increment, note: '발송 기록 고유 번호']
+  rental_id bigint [not null, note: '어느 대여에 대한 알림인지 (rental.id)']
+  type varchar(20) [not null, note: 'D_MINUS_1(기한 하루 전) | D_DAY(기한 당일) | OVERDUE(연체, 1회만)']
+  sent_at timestamp [not null, note: '메일을 보낸 시각']
+
+  Note: '''
+  ## 어떤 대여에 어떤 알림 메일을 보냈는지 기록
+
+  서버가 매일 자동으로 “내일이 기한인 대여”, “오늘이 기한인 대여”, “기한이 지난 대여”를 구분해 메일 발송.
+  서버가 재시작되거나 작업이 두 번 돌면 같은 메일이 또 나갈 수 있어서, 보내기 전에 이 테이블에서 “이미 보냈나?”를 확인.
+
+  - 대여 한 건당 최대 3줄 (하루 전, 당일, 연체)
+  -  “같은 대여에 같은 종류 알림은 한 번” 규칙(유니크 제약) 보류. 그전까지 코드에서 조회로 확인
+  '''
+}
+
+Table inventory_check {
+  id bigint [pk, increment, note: '확인 기록 고유 번호']
+  item_id bigint [not null, note: '센 물품 (item.id)']
+  expected_quantity int [not null, note: '시스템상 보관함에 있어야 할 수량. 확인하는 순간의 item.available_quantity']
+  counted_quantity int [not null, note: '운영진이 보관함을 열어 실제로 센 수량']
+  checked_by bigint [not null, note: '센 운영진 (member.id)']
+  checked_at timestamp [not null, note: '센 시각']
+  memo varchar(200) [note: '두 수량이 다를 때 남기는 메모 (예: 1개 부족, 반납 버튼 누락 학생 확인)']
+
+  Note: '''
+  ## 운영진의 하루 마감 개수 확인 기록
+
+  셀프 방식에서는 물건이 오가는 걸 실시간으로 확인하는데 제한이 있음. 앱 기록과 실제 보관함이 맞는지 수시로 확인하는 것이 유일한 방법.
+    - 더 나은 방식이 있는지 한번 의논해 봐야 할 것 같습니다.
+
+  ### 개수가 다를 때
+  - 실제가 적음 → 반납 버튼만 누르고 안 넣었거나, 신청 없이 꺼내간 경우 → 그날 반납 버튼을 누른 사람(rental.returned_at)부터 확인
+  - 실제가 많음 → 넣어놓고 반납 버튼을 안 누른 경우 → 해당 대여를 운영진이 대신 반납 처리 (rental.return_processed_by 기록)
+    이때 반납 시각은 운영진 처리 시각이라, 기한이 지났으면 연체로 남습니다.
+
+  ### 기록으로 남기는 이유
+  “자주 비는 빈도가 올라갈 시 비밀번호를 바꾸는 판단의 근거로 작용.
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// locker 패키지 — 사물함 (학기 단위 선착순)
+// ═══════════════════════════════════════════════════════════════
+
+Table semester {
+  id bigint [pk, increment, note: '학기 고유 번호']
+  name varchar(20) [not null, unique, note: '학기 이름 (예: 2026-2)']
+  start_date date [not null, note: '개강일. 학사 일정 기준']
+  apply_start_at timestamp [not null, note: '사물함 신청 시작 시각. 피그마 P5 “9/21 09:00”']
+  apply_end_at timestamp [not null, note: '사물함 신청 종료 시각. 피그마 P5 “9/28 18:00”']
+  end_date date [not null, note: '학기말 = 짐을 빼고 반납하는 기한. 피그마 P6 “12월 20일까지”']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 학기별 사물함 일정
+
+  - 운영진이 학교 학사 일정이 발표될 때마다 관리자 화면에서 새 학기를 한 줄 등록. 개발자가 코드나 DB를 손댈 필요가 없음.
+  - 화면에 신청 기간과 학기말이 표시되므로 그 날짜를 저장하는 곳.
+  - 신청 기간이 아니면 사물함 번호판은 보이되 신청을 막습니다.
+  - 사물함 배정 기록에 “어느 학기 배정인지” 도장을 찍는 기준이 됨.
+
+  ### 현재 학기 판별 규칙
+  사물함 번호판의 “사용중 / 빈칸”은 현재 학기 배정 기록으로 계산하므로, 어느 학기가 현재인지 하나로 정해져야 함.
+  - 현재 학기 = apply_start_at(신청 시작)이 지난 학기 중 가장 최근 학기
+  - EX) 1학기 end_date가 6월, 2학기 신청이 9월 시작 → 7~8월(방학)에는 1학기가 현재 학기(반납 안 한 사람 확인 가능), 9월 신청 시작 순간부터 2학기가 현재 학기
+  - 등록할 때 검증: 학기끼리 신청 기간이 겹치면 안 됨, apply_start_at < apply_end_at, start_date < end_date
+  '''
+}
+
+Table locker {
+  id bigint [pk, increment, note: '사물함 고유 번호 (사물함에 적힌 번호와 다름)']
+  number int [not null, unique, note: '사물함에 실제로 적힌 번호 (예: 137). 같은 번호 두 번 불가']
+  location varchar(100) [note: '위치 안내. 배정 완료 화면(P6)에 표시 (예: 3층 복도 우측)']
+  is_active boolean [not null, default: true, note: '사용 가능 여부. false = 사용 불가(고장 등). 사유는 구분하지 않음. 번호판에서 회색 처리, 신청 불가']
+  created_at timestamp [not null, note: '등록 시각']
+
+  Note: '''
+  ## 실제 사물함 하나당 한 줄
+
+  - 이 테이블의 줄 수 = 전체 사물함 개수
+  - 피그마 P5 “빈 사물함 28 / 44”: 44 = is_active가 true인 사물함 수, 28 = 그중 이번 학기 배정이 없는 수
+  - “사용중 / 빈칸” 상태는 저장하지 X. 이번 학기에 사용중(ASSIGNED)인 배정 기록이 있으면 사용중, 없으면 빈칸으로 계산.
+  - 상태를 따로 저장하면 배정할 때마다 두 곳을 고쳐야 하고, 하나를 빠뜨리면 어긋남.
+
+  ### 사용 불가 (is_active = false)
+  - 고장 등으로 못 쓰는 사물함. 사유는 구분하지 않고 “사용 불가” 하나로 표시.
+  - 사용중(배정)과는 별개. is_active는 사물함 자체의 상태, 사용중은 배정 기록으로 계산하는 값.
+  - 행을 지우지 않는 이유: 지난 학기 배정 기록이 이 사물함을 가리키고 있어서 삭제할 수 없음.
+  - 누가 쓰고 있는 사물함을 학기 중에 사용 불가로 바꾸면 기존 배정은 그대로 남음 → 운영진이 다른 번호로 옮겨주는 절차 필요 (운영 절차)
+  '''
+}
+
+Table locker_assignment {
+  id bigint [pk, increment, note: '배정 고유 번호']
+  member_id bigint [not null, note: '사물함을 쓰는 회원 (member.id)']
+  locker_id bigint [not null, note: '배정된 사물함 (locker.id)']
+  semester_id bigint [not null, note: '어느 학기 배정인지 (semester.id)']
+  status varchar(20) [not null, note: 'ASSIGNED(사용중) | RETURNED(반납)']
+  assigned_at timestamp [not null, note: '배정이 확정된 시각. 선착순이라 신청 즉시 확정']
+  returned_at timestamp [note: '반납 처리된 시각. 비어 있으면 아직 사용중']
+  password_encrypted varchar(255) [note: '신청할 때 학생이 입력한 “사물함에 설정할 비밀번호”. 양방향 암호화(AES) 저장, 관리자 화면에서만 풀어서 볼 수 있음. 반납하면 지움']
+  created_at timestamp [not null, note: '생성 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 누가, 어느 학기에, 몇 번 사물함을 쓰는지
+
+  ### 흐름
+  1. 신청 기간에 빈 번호 선택 + 설정할 비밀번호 입력 → ASSIGNED로 즉시 배정
+  2. 학생이 사물함에 가서 입력한 번호로 다이얼 설정
+  3. 학기말에 짐을 빼고 반납 → RETURNED, returned_at 기록, password_encrypted 삭제
+
+  ### 설계 이유
+  - 학기 단위 초기화: 연장 없이 학기가 끝나면 짐을 빼고 초기화. “초기화”는 현실에서 짐을 빼는 것이고, DB 기록은 지우지 않고 RETURNED로 남김. 그래야 학기말 미반납자를 찾을 수 있고, 같은 137번이라도 학기별 사용자가 구분이 가능.
+  - “계정당 1개”는 한 학기 안에서의 규칙. 학기가 쌓이면 한 학생의 배정 기록은 여러 줄이 되므로 member와는 1:N 구조.
+
+  ### 비밀번호 저장 방식
+  - 관리자가 원래 번호를 봐야 하므로, 되돌릴 수 없는 해시가 아니라 키로 풀 수 있는 양방향 암호화를 사용.
+  - 암호화 키는 DB와 따로 보관(환경변수 등). 같이 있으면 DB 유출 시 함께 풀리는 상황 발생 가능. !키 보관 위치 미정!
+  - 반납하면 지워서 필요 없어진 개인정보를 남기지 X.
+  - 관리자가 볼 때마다 locker_password_access_log에 기록.
+    -혹시 모를 도난 의심 방지
+  - 학생이 앱에 적은 번호와 다르게 다이얼을 맞출 수 있음 
+      -비밀번호 수정 기능을 둘지 의논 필요
+
+  ### 선착순 동시 클릭 !유니크 제약 보류!
+  - 규칙: 한 학기에 사용중인 사물함 번호당 1명, 한 학기에 계정당 사용중 1개
+  - 두 명이 같은 번호를 동시에 누르면, 코드에서 “비었는지 확인 후 저장”하는 방식으로는 둘 다 저장될 수 있습니다.
+  - 확실히 막으려면 status = ASSIGNED 인 행만 대상으로 하는 부분 유니크 제약이 필요. (학기 중 반납된 번호를 같은 학기에 다시 배정할 수 있도록)
+  '''
+}
+
+Table locker_password_access_log {
+  id bigint [pk, increment, note: '조회 기록 고유 번호']
+  assignment_id bigint [not null, note: '어느 배정의 비밀번호를 봤는지 (locker_assignment.id)']
+  admin_id bigint [not null, note: '비밀번호를 본 운영진 (member.id)']
+  accessed_at timestamp [not null, note: '본 시각']
+
+  Note: '''
+  ## 운영진이 사물함 비밀번호를 볼 때마다 한 줄
+
+  운영진은 학생 사물함을 열 수 있는 번호를 볼 수 있음. 누가 언제 봤는지 남겨두면
+  - 비밀번호 분실 문의에 대응했던 기록이 되고
+  - 혹시 모를 오용도 추적 가능.
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// council 패키지 — 학생회 콘텐츠
+// ═══════════════════════════════════════════════════════════════
+
+Table council_profile {
+  id bigint [pk, increment, note: '고유 번호 (항상 1줄만 존재)']
+  name varchar(100) [not null, note: '랜딩 화면 상단 학생회 명칭 (예: 제8대 인공지능소프트웨어융합대학 학생회 NOVA)']
+  intro text [note: '학생회 소개 문구. 길이를 예측할 수 없어 text로 설정']
+  org_chart_image_url varchar(500) [note: '조직도 이미지 주소. 이미지 한 장 vs 부서·인원 데이터 미정 (J1)']
+  created_at timestamp [not null, note: '생성 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 현재 학생회 정보 (항상 1줄)
+
+  랜딩 화면(P0)의 학생회 명칭, 소개, 조직도가 여기서 나옴.
+  역대 학생회 기록은 보관하지 않고, 학생회가 바뀌면 운영진이 내용을 덮어쓰는 방식으로 설계.
+    - 역대 학생회 기록을 쌓을 지 의논 필요. 
+  '''
+}
+
+Table pledge {
+  id bigint [pk, increment, note: '공약 고유 번호']
+  title varchar(200) [not null, note: '공약 제목 (예: 대여사업 무인화)']
+  content text [note: '공약 상세 내용']
+  display_order int [not null, note: '화면 표시 순서. id는 등록 순서일 뿐이라 운영진이 원하는 순서를 따로 저장']
+  created_at timestamp [not null, note: '등록 시각']
+  updated_at timestamp [note: '마지막 수정 시각']
+
+  Note: '''
+  ## 현재 학생회 공약 하나당 한 줄
+
+  매년 학생회가 바뀌면 운영진이 공약을 새로 교체.
+  '''
+}
+
+Table council_document {
+  id bigint [pk, increment, note: '문서 고유 번호']
+  type varchar(20) [not null, unique, note: 'RULES(학생회칙) | FAQ. 종류당 문서는 하나']
+  created_at timestamp [not null, note: '생성 시각']
+
+  Note: '''
+  ## 문서의 종류 (학생회칙, FAQ)
+
+  문서가 “있다”는 것만 표현. 실제 내용은 council_document_revision에 버전별로 쌓임.
+  새 버전을 만들 때 이 문서를 통해서만 만들게 해서, 버전 번호 규칙을 한 곳에서 관리.
+  '''
+}
+
+Table council_document_revision {
+  id bigint [pk, increment, note: '버전 고유 번호']
+  council_document_id bigint [not null, note: '어느 문서의 버전인지 (council_document.id)']
+  version int [not null, note: '1부터 1씩 증가. 가장 큰 번호가 현재 화면에 보이는 내용']
+  content text [not null, note: '문서 전문. 길이를 예측할 수 없어 text']
+  created_by bigint [not null, note: '이 버전을 작성한 운영진 (member.id)']
+  created_at timestamp [not null, note: '개정 시각']
+
+  Note: '''
+  ## 문서를 고칠 때마다 한 줄씩 쌓이는 버전 기록
+
+  학생회칙은 자주 바뀌어서, 수정할 때 기존 줄을 덮어쓰지 않고 **새 줄을 추가**하는 방식.
+  운영진 입장에선 그냥 “수정하고 저장”이지만, DB에는 옛날 버전이 남음.
+
+  - 화면(P1, P2)에는 가장 큰 버전 번호의 내용만 보여짐. 이력 조회 화면은 1차 범위 밖이지만 데이터는 남겨둡니다.
+  - “지난달엔 이렇게 되어 있었는데요?” 같은 질문에 답할 수 있고, created_by로 누가 고쳤는지도 남습니다.
+  - 한 번 저장된 버전은 바뀌지 않으므로 updated_at이 없습니다.
+  -  “같은 문서에 같은 버전 번호는 하나” 규칙(유니크 제약) 보류. 운영진 두 명이 동시에 수정하면 같은 번호가 두 번 생길 수 있음
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 관계 (FK)
+// ═══════════════════════════════════════════════════════════════
+
+Ref: enrollment_verification.member_id > member.id
+Ref: enrollment_verification.reviewed_by >? member.id // 자동 처리면 비어 있음
+Ref: item.category_id > item_category.id
+Ref: item.storage_id > item_storage.id
+Ref: rental.member_id > member.id
+Ref: rental.item_id > item.id
+Ref: rental.return_processed_by >? member.id // 학생 본인 반납이면 비어 있음
+Ref: notification_log.rental_id > rental.id
+Ref: inventory_check.item_id > item.id
+Ref: inventory_check.checked_by > member.id
+Ref: locker_assignment.member_id > member.id
+Ref: locker_assignment.locker_id > locker.id
+Ref: locker_assignment.semester_id > semester.id
+Ref: locker_password_access_log.assignment_id > locker_assignment.id
+Ref: locker_password_access_log.admin_id > member.id
+Ref: council_document_revision.council_document_id > council_document.id
+Ref: council_document_revision.created_by > member.id
+
+// ═══════════════════════════════════════════════════════════════
+// 패키지 경계 (DDD 도메인별 패키지)
+// ═══════════════════════════════════════════════════════════════
+// 한 패키지 안에 애그리거트가 여러 개 있을 수 있음.
+// 같은 패키지 안: 코드에서 객체 참조 허용
+// 다른 패키지 사이: 코드에서는 ID(Long)만 보관. DB FK는 그대로 유지
+
+TableGroup member_context [note: 'member 패키지 — 회원 가입, 이메일 인증, 로그인(이메일 + 비밀번호), 재학(학과) 인증'] {
+  member
+  allowed_department
+  enrollment_verification
+  email_verification
+}
+
+TableGroup rental_context [note: 'rental 패키지 — 물품 대여 (보관함 셀프 수령·반납, 하루 마감 확인)'] {
+  item_category
+  item_storage
+  item
+  rental
+  notification_log
+  inventory_check
+}
+
+TableGroup locker_context [note: 'locker 패키지 — 사물함 (학기 단위 선착순 배정, 비밀번호 관리)'] {
+  semester
+  locker
+  locker_assignment
+  locker_password_access_log
+}
+
+TableGroup council_context [note: 'council 패키지 — 학생회 정보, 공약, 학생회칙·FAQ'] {
+  council_profile
+  pledge
+  council_document
+  council_document_revision
+}
