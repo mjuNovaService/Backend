@@ -31,4 +31,21 @@ public class Link extends BaseEntity {
 
     @Column(nullable = false, length = 500)
     private String url;
+
+    public static Link create(String linkName, String url) {
+        Link link = new Link();
+        link.linkName = linkName;
+        link.url = url;
+        return link;
+    }
+
+    // PATCH: null인 칸은 그대로 둔다
+    public void update(String linkName, String url) {
+        if (linkName != null) {
+            this.linkName = linkName;
+        }
+        if (url != null) {
+            this.url = url;
+        }
+    }
 }

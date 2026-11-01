@@ -46,6 +46,10 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 인증 필요: 회원 정보 (Access Token 필수)
                         .requestMatchers("/api/members/**").authenticated()
+                        // 학생회(C): 관리자 API는 국장·회장단만, Q&A는 로그인한 학생만
+                        // (학생회 소개·링크 조회 GET /api/infos, /api/links 는 공개라 아래 anyRequest에 걸림)
+                        .requestMatchers("/api/admin/**").hasAnyRole("DIRECTOR", "PRESIDENT")
+                        .requestMatchers("/api/questions/**").authenticated()
                         // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,
                         //  /api/admin/** 는 관리자만 허용. 회원가입 API가 생기기 전까지 다른 파트 개발이 막히지 않게 임시로 열기.
                         .anyRequest().permitAll())

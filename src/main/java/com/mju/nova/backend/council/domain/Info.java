@@ -40,4 +40,27 @@ public class Info extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by", nullable = false)
     private Student updatedBy;
+
+    public static Info create(InfoType type, String title, String content, Student admin) {
+        Info info = new Info();
+        info.type = type;
+        info.title = title;
+        info.content = content;
+        info.updatedBy = admin;
+        return info;
+    }
+
+    // PATCH: null인 칸은 "안 보냄"이라 그대로 둔다. 누가 고쳤는지는 항상 바꾼다
+    public void update(InfoType type, String title, String content, Student admin) {
+        if (type != null) {
+            this.type = type;
+        }
+        if (title != null) {
+            this.title = title;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+        this.updatedBy = admin;
+    }
 }

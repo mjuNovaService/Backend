@@ -38,4 +38,19 @@ public class Answer extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "text")
     private String content;
+
+    // id는 넣지 않는다. @MapsId가 저장할 때 question의 id를 그대로 복사해 PK로 쓴다
+    public static Answer create(Question question, Student admin, String content) {
+        Answer answer = new Answer();
+        answer.question = question;
+        answer.admin = admin;
+        answer.content = content;
+        return answer;
+    }
+
+    // 답변 수정: 내용과 "마지막으로 답변을 쓴 관리자"를 바꾼다
+    public void update(Student admin, String content) {
+        this.admin = admin;
+        this.content = content;
+    }
 }

@@ -9,6 +9,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -45,6 +47,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
         log.warn("HttpMessageNotReadableException: {}", e.getMessage());
         return toResponse(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    // 쿼리 파라미터·경로 변수 타입이 안 맞음 (?type=ABC 처럼 enum에 없는 값, /questions/abc 처럼 숫자 자리에 문자) → 400 C001
+    // 이게 없으면 맨 아래 Exception 핸들러로 떨어져 500이 나간다
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("MethodArgumentTypeMismatchException: {} = {}", e.getName(), e.getValue());
+        List<ErrorResponse.FieldError> errors = List.of(
+                new ErrorResponse.FieldError(e.getName(), "올바르지 않은 값입니다: " + e.getValue()));
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        return ResponseEntity.status(errorCode.getStatus()).body(ErrorResponse.of(errorCode, errors));
+    }
+
+    // 필수 쿼리 파라미터를 안 보냄 (GET /api/infos 에 type 없이 요청 등) → 400 C001
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException e) {
+        log.warn("MissingServletRequestParameterException: {}", e.getParameterName());
+        List<ErrorResponse.FieldError> errors = List.of(
+                new ErrorResponse.FieldError(e.getParameterName(), "필수 값입니다"));
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        return ResponseEntity.status(errorCode.getStatus()).body(ErrorResponse.of(errorCode, errors));
     }
 
     // 지원하지 않는 HTTP 메서드 (GET API에 POST 요청 등) → 405 C002
