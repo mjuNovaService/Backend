@@ -2,7 +2,11 @@ package com.mju.nova.backend.common.config;
 
 import com.mju.nova.backend.common.security.CustomAccessDeniedHandler;
 import com.mju.nova.backend.common.security.CustomAuthenticationEntryPoint;
+import com.mju.nova.backend.common.security.JwtAuthenticationFilter;
+import com.mju.nova.backend.common.security.JwtProperties;
+import com.mju.nova.backend.common.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,14 +16,17 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(JwtProperties.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
+    private final JwtProvider jwtProvider;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,14 +44,19 @@ public class SecurityConfig {
                         // 공개: 서버 상태 확인, 에러 응답, Swagger
                         .requestMatchers("/health", "/actuator/health", "/error").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        // TODO(로그인 파트): JWT 필터를 넣는 PR에서 authenticated()로 바꾸고,
-                        //  /api/admin/** 는 관리자만 허용. 그 전까지 다른 파트 개발이 막히지 않게 임시로 열기.
+                        // 인증 필요: 회원 정보 (Access Token 필수)
+                        .requestMatchers("/api/members/**").authenticated()
+                        // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,
+                        //  /api/admin/** 는 관리자만 허용. 회원가입 API가 생기기 전까지 다른 파트 개발이 막히지 않게 임시로 열기.
                         .anyRequest().permitAll())
 
                 // 401·403도 ErrorResponse 형식으로 응답
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler));
+                        .accessDeniedHandler(accessDeniedHandler))
+
+                // 모든 요청에서 Access Token을 먼저 확인하도록 JWT 필터 추가
+                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
