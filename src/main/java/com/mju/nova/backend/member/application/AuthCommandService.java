@@ -5,10 +5,12 @@ import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.common.security.JwtProvider;
 import com.mju.nova.backend.common.security.TokenHasher;
 import com.mju.nova.backend.member.application.dto.LoginResult;
+import com.mju.nova.backend.member.application.dto.ReissueResult;
 import com.mju.nova.backend.member.domain.RefreshToken;
 import com.mju.nova.backend.member.domain.RefreshTokenRepository;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
+import io.jsonwebtoken.JwtException;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,6 +53,45 @@ public class AuthCommandService {
         refreshTokenRepository.save(RefreshToken.create(student, TokenHasher.sha256(refreshToken), expiresAt));
 
         return new LoginResult(accessToken, refreshToken, student.getId(), student.getName(), role);
+    }
+
+    public ReissueResult reissue(String refreshToken) {
+        // 1. 서명·만료·type="refresh" 확인 → 학번 꺼내기
+        String studentId;
+        try {
+            studentId = jwtProvider.parseRefreshToken(refreshToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 2. 우리가 발급해서 저장한 토큰인지 확인 (로그아웃했거나 이미 재발급에 쓴 토큰이면 없음)
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(TokenHasher.sha256(refreshToken))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+        if (stored.isExpired()) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 3. 회원 조회
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 4. 승인 상태 확인 (로그인 후 관리자가 상태를 바꿨을 수 있음)
+        checkApprovalStatus(student);
+
+        // 5. Rotation: 옛 토큰 줄을 지우고 새 토큰 두 개 발급 (role은 지금 DB 값으로)
+        refreshTokenRepository.delete(stored);
+        String newAccessToken = jwtProvider.createAccessToken(student.getId(), student.getRole().name());
+        String newRefreshToken = jwtProvider.createRefreshToken(student.getId());
+        LocalDateTime expiresAt = LocalDateTime.now().plus(jwtProvider.getRefreshTokenExpiration());
+        refreshTokenRepository.save(RefreshToken.create(student, TokenHasher.sha256(newRefreshToken), expiresAt));
+
+        return new ReissueResult(newAccessToken, newRefreshToken);
+    }
+
+    public void logout(String refreshToken) {
+        // 저장소에서 이 토큰 줄을 삭제. 없으면(이미 로그아웃·만료) 그냥 넘어감.
+        refreshTokenRepository.findByTokenHash(TokenHasher.sha256(refreshToken))
+                .ifPresent(refreshTokenRepository::delete);
     }
 
     private void checkApprovalStatus(Student student) {
