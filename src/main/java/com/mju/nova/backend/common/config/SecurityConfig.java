@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -50,6 +51,8 @@ public class SecurityConfig {
                         // (학생회 소개·링크 조회 GET /api/infos, /api/links 는 공개라 아래 anyRequest에 걸림)
                         .requestMatchers("/api/admin/**").hasAnyRole("DIRECTOR", "PRESIDENT")
                         .requestMatchers("/api/questions/**").authenticated()
+                        // 대여(B): 대여 가능 수량 조회는 비로그인 공개. 아래 /api/rentals/** 보다 먼저 와야 적용된다
+                        .requestMatchers(HttpMethod.GET, "/api/rentals/availability").permitAll()
                         // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)
                         .requestMatchers("/api/rentals/**").authenticated()
                         // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,

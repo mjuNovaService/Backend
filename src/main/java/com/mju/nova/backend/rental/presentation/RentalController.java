@@ -32,9 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 학생용 물품 대여. /api/rentals/** 는 SecurityConfig에서 로그인(Access Token) 필수.
+ * 단, 대여 가능 수량 조회는 비로그인도 볼 수 있게 공개.
  * 학생은 자기 대여만 볼 수 있다.
  */
-@Tag(name = "대여", description = "대여 가능 수량·대여 신청·내 대여 조회·예약 취소·반납 (로그인 필요)")
+@Tag(name = "대여", description = "대여 가능 수량(공개)·대여 신청·내 대여 조회·예약 취소·반납 (로그인 필요)")
 @RestController
 @RequestMapping("/api/rentals")
 @RequiredArgsConstructor
@@ -43,7 +44,7 @@ public class RentalController {
     private final RentalCommandService rentalCommandService;
     private final RentalQueryService rentalQueryService;
 
-    @Operation(summary = "대여 가능 수량", description = "물품명별 보유 수량(파손·분실 제외)과 지금 빌릴 수 있는 수량.")
+    @Operation(summary = "대여 가능 수량", description = "물품명별 보유 수량(파손·분실 제외)과 지금 빌릴 수 있는 수량. 로그인 없이 호출 가능.")
     @GetMapping("/availability")
     public ApiResponse<List<ItemAvailabilityResponse>> getAvailability() {
         return ApiResponse.success(rentalQueryService.getAvailability());
