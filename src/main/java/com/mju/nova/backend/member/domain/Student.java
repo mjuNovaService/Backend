@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -68,4 +69,18 @@ public class Student extends BaseEntity {
 
     // 탈퇴 시각 (소프트 삭제)
     private LocalDateTime deletedAt;
+
+    // 회원 생성용. 비밀번호는 BCrypt로 해시한 값을 넣는다
+    @Builder
+    private Student(String id, String name, String email, String password, String phoneNum,
+                    String department, StudentRole role, ApprovalStatus approvalStatus) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.phoneNum = phoneNum;
+        this.department = department;
+        this.role = role;
+        this.approvalStatus = approvalStatus;
+    }
 }
