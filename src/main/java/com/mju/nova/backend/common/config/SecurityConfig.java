@@ -55,6 +55,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/slots").permitAll()
                         // 대여(B): 대여 가능 수량 조회는 비로그인 공개. 아래 /api/rentals/** 보다 먼저 와야 적용된다
                         .requestMatchers(HttpMethod.GET, "/api/rentals/availability").permitAll()
+                        // 대여(B): 대여 불가 이벤트 기록은 비로그인 공개 (KPI 수집). 계정 정보는 저장하지 않음
+                        .requestMatchers(HttpMethod.POST, "/api/rentals/unavailable-events").permitAll()
                         // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)
                         .requestMatchers("/api/rentals/**").authenticated()
                         // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,

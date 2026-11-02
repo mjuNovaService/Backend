@@ -4,11 +4,13 @@ import com.mju.nova.backend.common.response.ApiResponse;
 import com.mju.nova.backend.common.response.PageResponse;
 import com.mju.nova.backend.rental.application.RentalExportService;
 import com.mju.nova.backend.rental.application.RentalQueryService;
+import com.mju.nova.backend.rental.application.RentalUnavailableEventService;
 import com.mju.nova.backend.rental.application.dto.AdminRentalResponse;
 import com.mju.nova.backend.rental.application.dto.CsvFile;
 import com.mju.nova.backend.rental.application.dto.RentStatusHistoryResponse;
 import com.mju.nova.backend.rental.application.dto.RentalExportCondition;
 import com.mju.nova.backend.rental.application.dto.RentalSearchCondition;
+import com.mju.nova.backend.rental.application.dto.UnavailableEventSummaryResponse;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 관리자 대여 현황. /api/admin/** 는 SecurityConfig에서 국장·회장단만 (Access Token의 role로 판단).
  */
-@Tag(name = "대여 (관리자)", description = "대여 목록·상태 이력 조회·CSV 내보내기")
+@Tag(name = "대여 (관리자)", description = "대여 목록·상태 이력 조회·CSV 내보내기·대여 불가 집계")
 @RestController
 @RequestMapping("/api/admin/rentals")
 @RequiredArgsConstructor
@@ -38,6 +40,7 @@ public class RentalAdminController {
 
     private final RentalQueryService rentalQueryService;
     private final RentalExportService rentalExportService;
+    private final RentalUnavailableEventService rentalUnavailableEventService;
 
     @Operation(summary = "대여 목록",
             description = "semesterId를 생략하면 현재 학기. pickupDate + slotId로 그날 그 슬롯에 꺼내둘 물품을 본다. "
@@ -76,6 +79,15 @@ public class RentalAdminController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(file.fileName(), StandardCharsets.UTF_8).build().toString())
                 .body(file.content());
+    }
+
+    @Operation(summary = "대여 불가 이벤트 집계",
+            description = "KPI K4. from·to(양 끝 포함)를 생략하면 현재 학기 기간. 물품명·사유별 건수, 물품명 가나다순.")
+    @GetMapping("/unavailable-events/summary")
+    public ApiResponse<List<UnavailableEventSummaryResponse>> getUnavailableEventSummary(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ApiResponse.success(rentalUnavailableEventService.summarize(from, to));
     }
 
     @Operation(summary = "대여 상태 이력", description = "상태가 바뀐 시각 순서대로. 최초 신청 이력의 beforeStatus는 null.")
