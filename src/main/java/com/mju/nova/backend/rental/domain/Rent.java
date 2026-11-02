@@ -12,13 +12,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * "물품당 대여중 1건만" 규칙은 조건이 붙은 중복 금지라 @Table UK로 만들지 않는다.
+ * "물품당 진행 중(RESERVED·RENTED) 대여 1건만" 규칙은 조건이 붙은 중복 금지라 @Table UK로 만들지 않는다.
  * 코드 검사(+ 락)와 DB 부분 인덱스(uk_rent_item_active)로 처리한다.
  */
 @Entity
@@ -31,6 +32,11 @@ public class Rent extends BaseEntity {
     @Column(name = "rent_id")
     private Long id;
 
+    // 워크인도 슬롯 시간 안에서만 대여
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_id", nullable = false)
+    private Slot slot;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
@@ -38,6 +44,9 @@ public class Rent extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
+
+    @Column(nullable = false)
+    private LocalDate pickupDate;
 
     @Column(length = 200)
     private String purpose;
