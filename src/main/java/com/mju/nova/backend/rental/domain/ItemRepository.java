@@ -20,7 +20,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, JpaSpecificat
 
     List<Item> findByName(String name);
 
-    // 물품명별 수량. NORMAL만 세고, availableCount는 그중 is_available = true인 것
+    // 물품명별 수량. NORMAL만 세고, availableCount는 그중 is_available = true인 것.
+    // 정렬은 하지 않는다 (DB 정렬 규칙(collation)에 따라 한글이 가나다순이 아닐 수 있어 서비스에서 정렬)
     @Query("""
             select new com.mju.nova.backend.rental.domain.ItemAvailability(
                 i.name, max(i.rentalPeriodDay), count(i),
@@ -28,7 +29,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, JpaSpecificat
             from Item i
             where i.status = :status
             group by i.name
-            order by i.name
             """)
     List<ItemAvailability> countByNameAndStatus(@Param("status") ItemStatus status);
 

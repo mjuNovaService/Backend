@@ -10,6 +10,7 @@ import com.mju.nova.backend.rental.application.dto.MyRentalResponse;
 import com.mju.nova.backend.rental.application.dto.RentStatusHistoryResponse;
 import com.mju.nova.backend.rental.application.dto.RentalDetailResponse;
 import com.mju.nova.backend.rental.application.dto.RentalSearchCondition;
+import com.mju.nova.backend.rental.domain.ItemAvailability;
 import com.mju.nova.backend.rental.domain.ItemRepository;
 import com.mju.nova.backend.rental.domain.ItemStatus;
 import com.mju.nova.backend.rental.domain.Rent;
@@ -21,6 +22,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -51,9 +53,10 @@ public class RentalQueryService {
 
     // ── 학생 ──
 
-    // NORMAL 물품만 물품명별로 센다. NORMAL이 하나도 없는 물품명은 빠진다
+    // NORMAL 물품만 물품명별로 센다. NORMAL이 하나도 없는 물품명은 빠진다. 물품명 가나다순
     public List<ItemAvailabilityResponse> getAvailability() {
         return itemRepository.countByNameAndStatus(ItemStatus.NORMAL).stream()
+                .sorted(Comparator.comparing(ItemAvailability::name))
                 .map(ItemAvailabilityResponse::from)
                 .toList();
     }

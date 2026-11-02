@@ -10,10 +10,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.util.Comparator;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 물품명 + 관리 번호로 하나씩 관리한다 (예: 노트북 충전기 3번).
+ * 목록 정렬은 BY_NAME_AND_NUMBER를 쓴다. DB의 ORDER BY name은 정렬 규칙(collation)에 따라
+ * 한글이 가나다순으로 나오지 않을 수 있다 (로컬 PostgreSQL en_US.utf8에서 확인).
+ */
 @Entity
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "uk_item_name_item_number", columnNames = {"name", "item_number"})
@@ -21,6 +27,10 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Item extends BaseEntity {
+
+    // 물품명 가나다순(한글 음절은 유니코드 순서가 가나다순) → 관리 번호 오름차순
+    public static final Comparator<Item> BY_NAME_AND_NUMBER =
+            Comparator.comparing(Item::getName).thenComparing(Item::getItemNumber);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

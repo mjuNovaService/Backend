@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +46,9 @@ public class ItemQueryService {
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
-        List<Item> items = itemRepository.findAll(filter, Sort.by("name", "itemNumber"));
+        List<Item> items = itemRepository.findAll(filter).stream()
+                .sorted(Item.BY_NAME_AND_NUMBER)
+                .toList();
 
         // 진행 중 대여는 물품당 최대 1건 (uk_rent_item_active)
         List<Long> itemIds = items.stream().map(Item::getId).toList();
