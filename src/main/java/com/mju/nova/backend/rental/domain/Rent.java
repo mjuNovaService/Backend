@@ -2,6 +2,7 @@ package com.mju.nova.backend.rental.domain;
 
 import com.mju.nova.backend.common.entity.BaseEntity;
 import com.mju.nova.backend.member.domain.Student;
+import com.mju.nova.backend.slot.domain.Slot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

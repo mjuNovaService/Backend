@@ -1,4 +1,4 @@
-package com.mju.nova.backend.rental.domain;
+package com.mju.nova.backend.slot.domain;
 
 import com.mju.nova.backend.common.entity.BaseEntity;
 import com.mju.nova.backend.member.domain.Student;

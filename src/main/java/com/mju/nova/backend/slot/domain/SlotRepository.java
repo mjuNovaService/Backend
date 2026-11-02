@@ -1,4 +1,4 @@
-package com.mju.nova.backend.rental.domain;
+package com.mju.nova.backend.slot.domain;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
