@@ -2,6 +2,7 @@ package com.mju.nova.backend.common.config;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +18,14 @@ import org.springframework.context.annotation.Configuration;
 public class JacksonConfig {
 
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
+    private static final String TIME_PATTERN = "HH:mm";
 
     @Bean
-    public JsonMapperBuilderCustomizer localDateTimeFormatCustomizer() {
-        return builder -> builder.withConfigOverride(LocalDateTime.class,
-                override -> override.setFormat(JsonFormat.Value.forPattern(DATE_TIME_PATTERN)));
+    public JsonMapperBuilderCustomizer dateTimeFormatCustomizer() {
+        return builder -> builder
+                .withConfigOverride(LocalDateTime.class,
+                        override -> override.setFormat(JsonFormat.Value.forPattern(DATE_TIME_PATTERN)))
+                .withConfigOverride(LocalTime.class,
+                        override -> override.setFormat(JsonFormat.Value.forPattern(TIME_PATTERN)));
     }
 }
