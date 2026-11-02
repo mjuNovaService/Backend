@@ -50,6 +50,8 @@ public class SecurityConfig {
                         // (학생회 소개·링크 조회 GET /api/infos, /api/links 는 공개라 아래 anyRequest에 걸림)
                         .requestMatchers("/api/admin/**").hasAnyRole("DIRECTOR", "PRESIDENT")
                         .requestMatchers("/api/questions/**").authenticated()
+                        // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)
+                        .requestMatchers("/api/rentals/**").authenticated()
                         // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,
                         //  /api/admin/** 는 관리자만 허용. 회원가입 API가 생기기 전까지 다른 파트 개발이 막히지 않게 임시로 열기.
                         .anyRequest().permitAll())

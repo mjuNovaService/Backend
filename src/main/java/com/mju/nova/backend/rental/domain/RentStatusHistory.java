@@ -37,4 +37,13 @@ public class RentStatusHistory extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RentStatus afterStatus;
+
+    // 변경 시각은 created_at
+    public static RentStatusHistory create(Rent rent, RentStatus beforeStatus, RentStatus afterStatus) {
+        RentStatusHistory history = new RentStatusHistory();
+        history.rent = rent;
+        history.beforeStatus = beforeStatus;
+        history.afterStatus = afterStatus;
+        return history;
+    }
 }

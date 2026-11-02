@@ -57,4 +57,21 @@ public class Slot extends BaseEntity {
     // true: 열림(기본값), false: 닫힘
     @Column(nullable = false)
     private Boolean status;
+
+    // 새 슬롯은 열린 상태
+    public static Slot create(Semester semester, Student manager, DayOfWeek dayOfWeek,
+                              LocalTime startTime, LocalTime endTime) {
+        Slot slot = new Slot();
+        slot.semester = semester;
+        slot.manager = manager;
+        slot.dayOfWeek = dayOfWeek;
+        slot.startTime = startTime;
+        slot.endTime = endTime;
+        slot.status = true;
+        return slot;
+    }
+
+    public boolean isOpen() {
+        return Boolean.TRUE.equals(status);
+    }
 }
