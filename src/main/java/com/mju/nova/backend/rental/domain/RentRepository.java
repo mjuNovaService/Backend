@@ -91,4 +91,9 @@ public interface RentRepository extends JpaRepository<Rent, Long>, JpaSpecificat
     @Override
     @EntityGraph(attributePaths = {"student", "item", "slot", "slot.manager"})
     Page<Rent> findAll(Specification<Rent> spec, Pageable pageable);
+
+    // 대여 이력 CSV. 페이지 없이 전체, 학생·물품·슬롯을 한 번에 가져온다
+    @Override
+    @EntityGraph(attributePaths = {"student", "item", "slot"})
+    List<Rent> findAll(Specification<Rent> spec, Sort sort);
 }
