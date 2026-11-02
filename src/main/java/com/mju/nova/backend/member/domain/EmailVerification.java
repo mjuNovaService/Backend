@@ -37,4 +37,34 @@ public class EmailVerification extends BaseEntity {
 
     // 인증 완료 시각. 미인증이면 NULL
     private LocalDateTime verifiedAt;
+
+    private EmailVerification(String email, String code, LocalDateTime expiresAt) {
+        this.email = email;
+        this.code = code;
+        this.expiresAt = expiresAt;
+    }
+
+    public static EmailVerification create(String email, String code, LocalDateTime expiresAt) {
+        return new EmailVerification(email, code, expiresAt);
+    }
+
+    // 인증코드 유효 시간이 지났나
+    public boolean isExpired() {
+        return expiresAt.isBefore(LocalDateTime.now());
+    }
+
+    // 이미 인증을 마쳤나
+    public boolean isVerified() {
+        return verifiedAt != null;
+    }
+
+    // 입력한 코드가 맞나
+    public boolean matches(String inputCode) {
+        return code.equals(inputCode);
+    }
+
+    // 인증 완료 처리
+    public void markVerified() {
+        this.verifiedAt = LocalDateTime.now();
+    }
 }
