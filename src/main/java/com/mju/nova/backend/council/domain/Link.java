@@ -31,4 +31,16 @@ public class Link extends BaseEntity {
 
     @Column(nullable = false, length = 500)
     private String url;
+
+    public static Link create(String linkName, String url) {
+        Link link = new Link();
+        link.linkName = linkName;
+        link.url = url;
+        return link;
+    }
+
+    // linkName은 프론트가 버튼을 찾는 식별자라 바꾸지 않는다. 주소만 바꾼다
+    public void changeUrl(String url) {
+        this.url = url;
+    }
 }

@@ -32,7 +32,23 @@ public enum ErrorCode {
     MEMBER_REJECTED(HttpStatus.FORBIDDEN, "M002", "승인이 거절되었습니다"),
     MEMBER_PENDING(HttpStatus.FORBIDDEN, "M003", "승인 대기 중입니다"),
     STUDENT_ID_ALREADY_REGISTERED(HttpStatus.CONFLICT, "M004", "이미 가입된 학번입니다"),
-    INVALID_CERTIFICATE_FILE(HttpStatus.BAD_REQUEST, "M005", "재학증명서 파일 형식 또는 크기가 올바르지 않습니다");
+    INVALID_CERTIFICATE_FILE(HttpStatus.BAD_REQUEST, "M005", "재학증명서 파일 형식 또는 크기가 올바르지 않습니다"),
+
+    // 학생회 소개 (IN)
+    INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "IN001", "존재하지 않는 학생회 소개 글입니다"),
+    INFO_TYPE_ALREADY_EXISTS(HttpStatus.CONFLICT, "IN002", "이 종류는 글을 하나만 둘 수 있습니다. 기존 글을 수정해 주세요"),
+
+    // 바로가기 링크 (LK)
+    LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "LK001", "존재하지 않는 링크입니다"),
+    LINK_NAME_DUPLICATED(HttpStatus.CONFLICT, "LK002", "이미 사용 중인 링크 이름입니다"),
+
+    // Q&A (QA)
+    QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "QA001", "존재하지 않는 질문입니다"),
+    QUESTION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "QA002", "본인이 작성한 질문만 볼 수 있습니다"),
+    ANSWERED_QUESTION_NOT_DELETABLE(HttpStatus.CONFLICT, "QA003", "답변이 달린 질문은 삭제할 수 없습니다"),
+    ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "QA004", "이미 답변이 등록된 질문입니다"),
+    ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "QA005", "아직 답변이 없는 질문입니다"),
+    ANSWERED_QUESTION_NOT_EDITABLE(HttpStatus.CONFLICT, "QA006", "답변이 달린 질문은 수정할 수 없습니다");
 
     private final HttpStatus status;
     private final String code;

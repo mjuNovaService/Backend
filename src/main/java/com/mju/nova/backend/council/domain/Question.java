@@ -34,4 +34,27 @@ public class Question extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "text")
     private String content;
+
+    public static Question create(Student student, String title, String content) {
+        Question question = new Question();
+        question.student = student;
+        question.title = title;
+        question.content = content;
+        return question;
+    }
+
+    // PATCH: null인 칸은 그대로 둔다
+    public void update(String title, String content) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+    }
+
+    // 작성자 본인인지. student는 LAZY지만 getId()는 프록시가 이미 알고 있어 추가 SELECT가 없다
+    public boolean isWrittenBy(String studentId) {
+        return student.getId().equals(studentId);
+    }
 }
