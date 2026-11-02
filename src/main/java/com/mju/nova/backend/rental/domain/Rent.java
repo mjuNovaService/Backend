@@ -60,4 +60,9 @@ public class Rent extends BaseEntity {
     private LocalDateTime dueAt;
 
     private LocalDateTime returnedAt;
+
+    // 연체: 대여 중이면서 반납 기한이 지남 (DB 컬럼 없이 계산)
+    public boolean isOverdue(LocalDateTime now) {
+        return status == RentStatus.RENTED && now.isAfter(dueAt);
+    }
 }
