@@ -6,14 +6,14 @@
 |---|---|---|
 | 학생회 소개 | 소개·공약·조직도·회칙·FAQ를 종류(type)별로 보여준다 | 누구나 조회, 수정은 관리자만 |
 | 학생회 소개 | 관리자가 글을 쓰고 고치고 지운다. 마지막으로 고친 사람이 기록된다 | updated_by |
-| 학생회 소개 | 소개·조직도·회칙은 글 1개만, 공약·FAQ는 여러 개 | 이미 있으면 409 IN002 |
+| 학생회 소개 | 소개·공약·조직도·회칙은 글 1개만 (올려두고 수정해서 사용), FAQ만 여러 개 | 이미 있으면 409 IN002 |
 | 바로가기 링크 | 인스타·카톡 오픈채팅 같은 외부 링크 목록 | 링크 이름은 중복 불가 |
 | 바로가기 링크 | 링크 이름은 프론트가 버튼을 찾는 식별자라 수정 불가, 주소만 수정 | 이름 바꾸려면 삭제 후 재등록 |
 | Q&A | 로그인한 학생이 질문을 남기고, 내 질문만 볼 수 있다 | 남의 질문은 못 봄 |
 | Q&A | 관리자가 전체 질문을 보고 답변을 단다. 질문 하나에 답변 하나 | Answer가 Question의 PK를 같이 씀(@MapsId) |
 | Q&A | 1:1 문의: 학생은 본인 질문만, 관리자는 전체 | 공개 게시판 아님 |
 | Q&A | 답변 달리기 전까지만 학생이 질문을 수정·삭제할 수 있다 | 답변 후 409 |
-| 공통 | 내용 길이 제한: 질문·답변 5,000자, 소개 글 20,000자 | 넘으면 400 |
+| 공통 | 내용 길이 제한: 질문·답변 5,000자, 소개 글 50,000자 (회칙 전체가 글 하나) | 넘으면 400 |
 
 ## 흐름 전개
 
@@ -71,7 +71,7 @@ InfoController
  └ InfoQueryService.getInfos(type)          @Transactional(readOnly = true)
      1. info에서 type이 같은 글 조회 (읽기)
      2. 작성 순서(info_id 오름차순) 정렬 → DTO로 변환
- 성공(200): { "success": true, "data": [ { "infoId": 1, "type": "PLEDGE", "title": "공약 1", "content": "...", "updatedAt": "..." } ] }
+ 성공(200): { "success": true, "data": [ { "infoId": 1, "type": "FAQ", "title": "사물함 신청은 언제 하나요?", "content": "...", "updatedAt": "..." } ] }
  // 글이 없으면 빈 배열 [] (에러 아님)
 ```
 
@@ -96,16 +96,16 @@ InfoController
 4. 어떤 경우에 실패하나? : 입력값 오류, 토큰 없음, 관리자 아님, 1개짜리 종류에 이미 글 있음
 
 ```
-POST /api/admin/infos   { "type": "PLEDGE", "title": "공약 1", "content": "..." }
+POST /api/admin/infos   { "type": "FAQ", "title": "사물함 신청은 언제 하나요?", "content": "..." }
 Authorization: Bearer eyJ...
 
 JwtAuthenticationFilter → 토큰 확인                    X 토큰 없음·만료 (401 A101)
 SecurityConfig → /api/admin/** 은 국장·회장단만        X 관리자 아님 (403 A102)
 InfoController
- └ @Valid: type 필수, title 1~200자, content 1~20,000자  X 입력값 오류 (400)
+ └ @Valid: type 필수, title 1~200자, content 1~50,000자  X 입력값 오류 (400)
  └ @AuthenticationPrincipal 로 로그인한 학번 꺼내기
  └ InfoCommandService.create(학번, 요청)        @Transactional
-     1. INTRO·ORG_CHART·RULES면 → 이미 글이 있나? (읽기)   X 1개만 가능 (409 IN002)
+     1. FAQ가 아니면 → 이미 글이 있나? (읽기)               X 1개만 가능 (409 IN002)
      2. 학번으로 student 조회 (읽기)                     X 회원 없음 (404)
      3. Info 생성 (updatedBy = 이 관리자)
      4. info 저장 (쓰기)
@@ -119,7 +119,7 @@ InfoController
 | 기능 | 학생회 소개 글 등록 |
 | 메서드-URL | POST /api/admin/infos |
 | 권한 | 관리자 |
-| Request Body | { "type": "PLEDGE", "title": "공약 1", "content": "..." } |
+| Request Body | { "type": "FAQ", "title": "사물함 신청은 언제 하나요?", "content": "..." } |
 | Response(성공) | 201 { "success": true, "data": { "infoId": 7 } } |
 | 처리 흐름 | 토큰·권한 확인 → 입력 검사 → (1개짜리 종류면) 기존 글 확인 → 작성자 조회 → 저장 |
 | 사용 테이블 | student (읽기), info (쓰기) |
@@ -571,7 +571,7 @@ AnswerCommandService.update(학번, questionId, 요청)   @Transactional
 | 코드 | HTTP | 메시지 | 언제 |
 |---|---|---|---|
 | IN001 | 404 | 존재하지 않는 학생회 소개 글입니다 | 소개 글 수정·삭제 시 id 없음 |
-| IN002 | 409 | 이 종류는 글을 하나만 둘 수 있습니다. 기존 글을 수정해 주세요 | INTRO·ORG_CHART·RULES에 두 번째 글 등록, 또는 그 종류로 변경 |
+| IN002 | 409 | 이 종류는 글을 하나만 둘 수 있습니다. 기존 글을 수정해 주세요 | FAQ 외 종류(INTRO·PLEDGE·ORG_CHART·RULES)에 두 번째 글 등록, 또는 그 종류로 변경 |
 | LK001 | 404 | 존재하지 않는 링크입니다 | 링크 수정·삭제 시 id 없음 |
 | LK002 | 409 | 이미 사용 중인 링크 이름입니다 | 링크 등록 시 이름 중복 |
 | QA001 | 404 | 존재하지 않는 질문입니다 | 질문 조회·삭제·답변 등록 시 id 없음 |
@@ -588,7 +588,7 @@ AnswerCommandService.update(학번, questionId, 요청)   @Transactional
 - 관리자 = DIRECTOR(국장)·PRESIDENT(회장단). SecurityConfig에 /api/admin/**, /api/questions/** 규칙 추가
 - Q&A는 1:1 문의 (공개 게시판 아님). 답변 전까지만 학생이 수정·삭제
 - 링크 이름은 수정 불가 (주소만 수정)
-- 소개·조직도·회칙은 1개만, 공약·FAQ는 여러 개
+- 소개·공약·조직도·회칙은 1개만 (올려두고 수정해서 사용), FAQ만 여러 개 (기획 확정)
 - 소개 글 순서는 등록순. 조직도는 content에 텍스트 또는 이미지 주소 (순서 변경·이미지 업로드는 이후 검토)
 - 목록 페이지 규칙은 공통(PageRequests): page 음수면 0, size는 1~50으로 보정, 에러 안 냄
 - 실패 응답 형식은 A 파트 ErrorResponse(`success:false, code, message, errors`)를 그대로 따름

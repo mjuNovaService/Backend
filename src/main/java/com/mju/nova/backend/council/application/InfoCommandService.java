@@ -47,7 +47,7 @@ public class InfoCommandService {
         infoRepository.delete(findInfo(infoId));
     }
 
-    // INTRO·ORG_CHART·RULES는 글이 이미 있으면 새로 못 만든다 → 기존 글을 수정해야 함
+    // FAQ를 뺀 종류(INTRO·PLEDGE·ORG_CHART·RULES)는 글이 이미 있으면 새로 못 만든다 → 기존 글을 수정해야 함
     // (관리자 두 명이 동시에 등록하는 경우는 DB 제약이 없어 막지 못한다. 관리자 전용이라 허용)
     private void checkSingleType(InfoType type) {
         if (type.isSingle() && infoRepository.existsByType(type)) {

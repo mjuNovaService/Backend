@@ -14,7 +14,7 @@ public record InfoCreateRequest(
         String title,
 
         @NotBlank(message = "내용을 입력해 주세요")
-        @Size(max = 20000, message = "내용은 20,000자 이하로 입력해 주세요")
+        @Size(max = 50000, message = "내용은 50,000자 이하로 입력해 주세요")
         String content
 ) {
 }
