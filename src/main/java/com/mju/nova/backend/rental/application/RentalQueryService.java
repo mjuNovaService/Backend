@@ -18,6 +18,7 @@ import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
 import com.mju.nova.backend.semester.domain.Semester;
+import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.LocalDateTime;

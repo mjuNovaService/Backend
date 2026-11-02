@@ -1,4 +1,4 @@
-package com.mju.nova.backend.rental.application;
+package com.mju.nova.backend.slot.application;
 
 import com.mju.nova.backend.semester.domain.Semester;
 import com.mju.nova.backend.semester.domain.SemesterRepository;

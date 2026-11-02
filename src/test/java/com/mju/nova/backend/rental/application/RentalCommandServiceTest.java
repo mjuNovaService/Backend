@@ -21,6 +21,7 @@ import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistory;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
 import com.mju.nova.backend.semester.domain.Semester;
+import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
@@ -80,7 +81,7 @@ class RentalCommandServiceTest {
 
     private void givenSlot(DayOfWeek dayOfWeek, LocalTime startTime) {
         Slot slot = Slot.create(semester, null, dayOfWeek, startTime, startTime.plusHours(1));
-        given(slotRepository.findById(SLOT_ID)).willReturn(Optional.of(slot));
+        given(slotRepository.findByIdForShare(SLOT_ID)).willReturn(Optional.of(slot));
     }
 
     private RentalCommandService serviceAt(LocalDateTime now) {
@@ -173,7 +174,7 @@ class RentalCommandServiceTest {
         Semester past = mock(Semester.class);
         given(past.getId()).willReturn(99L);
         Slot pastSlot = Slot.create(past, null, DayOfWeek.WED, LocalTime.of(12, 0), LocalTime.of(13, 0));
-        given(slotRepository.findById(SLOT_ID)).willReturn(Optional.of(pastSlot));
+        given(slotRepository.findByIdForShare(SLOT_ID)).willReturn(Optional.of(pastSlot));
 
         assertThatThrownBy(() -> service().apply(STUDENT_ID, "충전기", SLOT_ID, TODAY, null))
                 .extracting("errorCode").isEqualTo(ErrorCode.SLOT_NOT_IN_CURRENT_SEMESTER);

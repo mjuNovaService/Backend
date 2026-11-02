@@ -2,10 +2,10 @@ package com.mju.nova.backend.rental.infrastructure;
 
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
-import com.mju.nova.backend.rental.application.CurrentSemesterReader;
 import com.mju.nova.backend.rental.domain.Item;
 import com.mju.nova.backend.rental.domain.ItemRepository;
 import com.mju.nova.backend.semester.domain.Semester;
+import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;

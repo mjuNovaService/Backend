@@ -66,6 +66,10 @@ public enum ErrorCode {
     SLOT_NOT_FOUND(HttpStatus.NOT_FOUND, "SL001", "수령 시간을 찾을 수 없습니다"),
     SLOT_CLOSED(HttpStatus.BAD_REQUEST, "SL002", "운영하지 않는 수령 시간입니다"),
     SLOT_NOT_IN_CURRENT_SEMESTER(HttpStatus.BAD_REQUEST, "SL003", "현재 학기 수령 시간이 아닙니다"),
+    DUPLICATE_SLOT(HttpStatus.CONFLICT, "SL004", "같은 요일·시작 시각의 수령 시간이 이미 있습니다"),
+    INVALID_SLOT_TIME(HttpStatus.BAD_REQUEST, "SL005", "시작 시각은 종료 시각보다 빨라야 합니다"),
+    SLOT_MANAGER_NOT_ADMIN(HttpStatus.BAD_REQUEST, "SL006", "담당자는 운영진만 지정할 수 있습니다"),
+    SLOT_HAS_RESERVATION(HttpStatus.CONFLICT, "SL007", "예약이 걸린 수령 시간은 시각을 바꿀 수 없습니다"),
 
     // 물품 (I)
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "I001", "물품을 찾을 수 없습니다"),

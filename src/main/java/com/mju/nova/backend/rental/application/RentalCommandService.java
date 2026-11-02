@@ -16,6 +16,7 @@ import com.mju.nova.backend.rental.domain.RentStatusHistory;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
 import com.mju.nova.backend.rental.domain.RentalDatePolicy;
 import com.mju.nova.backend.semester.domain.Semester;
+import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
 import jakarta.persistence.EntityManager;
@@ -51,7 +52,8 @@ public class RentalCommandService {
                                       LocalDate pickupDate, String purpose) {
         LocalDateTime now = LocalDateTime.now(clock);
 
-        Slot slot = slotRepository.findById(slotId)
+        // 공유 잠금: 관리자가 같은 슬롯의 시각을 바꾸는 중이면 끝날 때까지 기다린다 (SL007 검사와 엇갈리지 않게)
+        Slot slot = slotRepository.findByIdForShare(slotId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SLOT_NOT_FOUND));
         if (!slot.isOpen()) {
             throw new BusinessException(ErrorCode.SLOT_CLOSED);

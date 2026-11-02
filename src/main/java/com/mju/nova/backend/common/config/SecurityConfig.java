@@ -51,6 +51,8 @@ public class SecurityConfig {
                         // (학생회 소개·링크 조회 GET /api/infos, /api/links 는 공개라 아래 anyRequest에 걸림)
                         .requestMatchers("/api/admin/**").hasAnyRole("DIRECTOR", "PRESIDENT")
                         .requestMatchers("/api/questions/**").authenticated()
+                        // 대여(B): 수령 시간 목록은 비로그인 공개 (대여 신청 화면에서 고르는 목록)
+                        .requestMatchers(HttpMethod.GET, "/api/slots").permitAll()
                         // 대여(B): 대여 가능 수량 조회는 비로그인 공개. 아래 /api/rentals/** 보다 먼저 와야 적용된다
                         .requestMatchers(HttpMethod.GET, "/api/rentals/availability").permitAll()
                         // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)

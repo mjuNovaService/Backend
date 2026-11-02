@@ -30,6 +30,9 @@ public interface RentRepository extends JpaRepository<Rent, Long>, JpaSpecificat
     // 물품 상태 변경 전 확인: 예약이 걸린 물품인가
     boolean existsByItem_IdAndStatus(Long itemId, RentStatus status);
 
+    // 슬롯 시각 변경 전 확인: 예약이 걸린 슬롯인가
+    boolean existsBySlot_IdAndStatus(Long slotId, RentStatus status);
+
     // 관리자 물품 목록의 currentRent. 물품마다 따로 조회하면 N+1이라 한 번에 가져온다
     @EntityGraph(attributePaths = "student")
     List<Rent> findByItem_IdInAndStatusIn(Collection<Long> itemIds, Collection<RentStatus> statuses);
