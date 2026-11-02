@@ -48,7 +48,7 @@ public class Answer extends BaseEntity {
         return answer;
     }
 
-    // 답변 수정: 내용과 "마지막으로 답변을 쓴 관리자"를 바꾼다
+    // 답변 수정: 내용과 "마지막으로 답변을 고친 관리자"를 바꾼다. 처음 답변 시각은 created_at에 남는다
     public void update(Student admin, String content) {
         this.admin = admin;
         this.content = content;

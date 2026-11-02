@@ -35,12 +35,10 @@ public class LinkCommandService {
         }
     }
 
-    public LinkIdResponse update(Long linkId, String linkName, String url) {
+    // 이름(linkName)은 못 바꾼다. 이름을 바꾸려면 삭제 후 다시 등록
+    public LinkIdResponse update(Long linkId, String url) {
         Link link = findLink(linkId);
-        if (linkName != null && linkRepository.existsByLinkNameAndIdNot(linkName, linkId)) {
-            throw new BusinessException(ErrorCode.LINK_NAME_DUPLICATED);
-        }
-        link.update(linkName, url);
+        link.changeUrl(url);
         return new LinkIdResponse(link.getId());
     }
 

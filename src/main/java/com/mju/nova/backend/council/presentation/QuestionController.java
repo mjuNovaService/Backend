@@ -6,9 +6,10 @@ import com.mju.nova.backend.council.application.QuestionCommandService;
 import com.mju.nova.backend.council.application.QuestionQueryService;
 import com.mju.nova.backend.council.application.dto.MyQuestionDetailResponse;
 import com.mju.nova.backend.council.application.dto.MyQuestionSummaryResponse;
-import com.mju.nova.backend.council.application.dto.PageResponse;
+import com.mju.nova.backend.common.response.PageResponse;
 import com.mju.nova.backend.council.application.dto.QuestionIdResponse;
 import com.mju.nova.backend.council.presentation.dto.QuestionCreateRequest;
+import com.mju.nova.backend.council.presentation.dto.QuestionUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 학생용 Q&A. /api/questions/** 는 SecurityConfig에서 로그인(Access Token) 필수.
  * 학생은 자기 질문만 볼 수 있다.
  */
-@Tag(name = "Q&A", description = "질문 등록·내 질문 조회·삭제 (로그인 필요)")
+@Tag(name = "Q&A", description = "질문 등록·내 질문 조회·수정·삭제 (로그인 필요)")
 @RestController
 @RequestMapping("/api/questions")
 @RequiredArgsConstructor
@@ -65,6 +67,16 @@ public class QuestionController {
             @Parameter(hidden = true) @AuthenticationPrincipal LoginStudent loginStudent,
             @PathVariable Long questionId) {
         return ApiResponse.success(questionQueryService.getMyQuestion(loginStudent.studentId(), questionId));
+    }
+
+    @Operation(summary = "내 질문 수정", description = "보낸 칸만 바뀐다. 답변이 달린 질문은 수정할 수 없다 (409 QA006).")
+    @PatchMapping("/{questionId}")
+    public ApiResponse<QuestionIdResponse> update(
+            @Parameter(hidden = true) @AuthenticationPrincipal LoginStudent loginStudent,
+            @PathVariable Long questionId,
+            @RequestBody @Valid QuestionUpdateRequest request) {
+        return ApiResponse.success(questionCommandService.update(
+                loginStudent.studentId(), questionId, request.title(), request.content()));
     }
 
     @Operation(summary = "내 질문 삭제", description = "답변이 달린 질문은 삭제할 수 없다 (409 QA003).")

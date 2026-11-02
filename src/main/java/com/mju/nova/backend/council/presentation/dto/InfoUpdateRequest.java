@@ -15,6 +15,7 @@ public record InfoUpdateRequest(
         @Pattern(regexp = ".*\\S.*", message = "제목을 비워둘 수 없습니다")
         String title,
 
+        @Size(max = 20000, message = "내용은 20,000자 이하로 입력해 주세요")
         @Pattern(regexp = "(?s).*\\S.*", message = "내용을 비워둘 수 없습니다")
         String content
 ) {

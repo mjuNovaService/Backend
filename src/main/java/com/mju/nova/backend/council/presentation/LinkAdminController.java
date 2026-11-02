@@ -34,11 +34,11 @@ public class LinkAdminController {
         return ApiResponse.success(linkCommandService.create(request.linkName(), request.url()));
     }
 
-    @Operation(summary = "링크 수정", description = "보낸 칸만 바뀐다.")
+    @Operation(summary = "링크 주소 수정", description = "url만 바꾼다. 이름을 바꾸려면 삭제 후 다시 등록.")
     @PatchMapping("/{linkId}")
     public ApiResponse<LinkIdResponse> update(@PathVariable Long linkId,
                                               @RequestBody @Valid LinkUpdateRequest request) {
-        return ApiResponse.success(linkCommandService.update(linkId, request.linkName(), request.url()));
+        return ApiResponse.success(linkCommandService.update(linkId, request.url()));
     }
 
     @Operation(summary = "링크 삭제")

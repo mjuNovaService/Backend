@@ -39,13 +39,8 @@ public class Link extends BaseEntity {
         return link;
     }
 
-    // PATCH: null인 칸은 그대로 둔다
-    public void update(String linkName, String url) {
-        if (linkName != null) {
-            this.linkName = linkName;
-        }
-        if (url != null) {
-            this.url = url;
-        }
+    // linkName은 프론트가 버튼을 찾는 식별자라 바꾸지 않는다. 주소만 바꾼다
+    public void changeUrl(String url) {
+        this.url = url;
     }
 }

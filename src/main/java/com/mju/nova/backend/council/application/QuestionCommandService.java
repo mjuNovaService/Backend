@@ -31,16 +31,32 @@ public class QuestionCommandService {
         return new QuestionIdResponse(question.getId());
     }
 
-    public void delete(String studentId, Long questionId) {
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
-        if (!question.isWrittenBy(studentId)) {
-            throw new BusinessException(ErrorCode.QUESTION_ACCESS_DENIED);
+    // 답변 달리기 전까지만 수정 가능 (답변 내용과 질문이 어긋나지 않게)
+    public QuestionIdResponse update(String studentId, Long questionId, String title, String content) {
+        Question question = findMyQuestion(studentId, questionId);
+        if (answerRepository.existsById(questionId)) {
+            throw new BusinessException(ErrorCode.ANSWERED_QUESTION_NOT_EDITABLE);
         }
+        question.update(title, content);
+        return new QuestionIdResponse(questionId);
+    }
+
+    public void delete(String studentId, Long questionId) {
+        Question question = findMyQuestion(studentId, questionId);
         // 답변이 달린 질문을 지우면 answer 행이 FK 때문에 남을 수 없고, 관리자가 쓴 답변도 같이 사라진다 → 막는다
         if (answerRepository.existsById(questionId)) {
             throw new BusinessException(ErrorCode.ANSWERED_QUESTION_NOT_DELETABLE);
         }
         questionRepository.delete(question);
+    }
+
+    // 있는 질문인가? → 내가 쓴 질문인가?
+    private Question findMyQuestion(String studentId, Long questionId) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        if (!question.isWrittenBy(studentId)) {
+            throw new BusinessException(ErrorCode.QUESTION_ACCESS_DENIED);
+        }
+        return question;
     }
 }

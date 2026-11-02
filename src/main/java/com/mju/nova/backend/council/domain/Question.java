@@ -43,6 +43,16 @@ public class Question extends BaseEntity {
         return question;
     }
 
+    // PATCH: null인 칸은 그대로 둔다
+    public void update(String title, String content) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+    }
+
     // 작성자 본인인지. student는 LAZY지만 getId()는 프록시가 이미 알고 있어 추가 SELECT가 없다
     public boolean isWrittenBy(String studentId) {
         return student.getId().equals(studentId);

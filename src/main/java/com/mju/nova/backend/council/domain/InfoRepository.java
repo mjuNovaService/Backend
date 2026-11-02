@@ -7,4 +7,7 @@ public interface InfoRepository extends JpaRepository<Info, Long> {
 
     // 메서드 이름으로 쿼리 생성: WHERE type = ? ORDER BY info_id ASC (작성 순서대로)
     List<Info> findAllByTypeOrderByIdAsc(InfoType type);
+
+    // 1개짜리 종류(INTRO·ORG_CHART·RULES)에 이미 글이 있나?
+    boolean existsByType(InfoType type);
 }

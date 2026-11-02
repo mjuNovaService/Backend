@@ -6,7 +6,7 @@ import com.mju.nova.backend.council.application.AnswerCommandService;
 import com.mju.nova.backend.council.application.QuestionQueryService;
 import com.mju.nova.backend.council.application.dto.AdminQuestionDetailResponse;
 import com.mju.nova.backend.council.application.dto.AdminQuestionSummaryResponse;
-import com.mju.nova.backend.council.application.dto.PageResponse;
+import com.mju.nova.backend.common.response.PageResponse;
 import com.mju.nova.backend.council.application.dto.QuestionIdResponse;
 import com.mju.nova.backend.council.presentation.dto.AnswerRequest;
 import io.swagger.v3.oas.annotations.Operation;

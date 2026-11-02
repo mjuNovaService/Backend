@@ -9,6 +9,7 @@ public record QuestionCreateRequest(
         String title,
 
         @NotBlank(message = "내용을 입력해 주세요")
+        @Size(max = 5000, message = "내용은 5,000자 이하로 입력해 주세요")
         String content
 ) {
 }

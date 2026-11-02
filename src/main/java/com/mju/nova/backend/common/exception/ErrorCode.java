@@ -36,6 +36,7 @@ public enum ErrorCode {
 
     // 학생회 소개 (IN)
     INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "IN001", "존재하지 않는 학생회 소개 글입니다"),
+    INFO_TYPE_ALREADY_EXISTS(HttpStatus.CONFLICT, "IN002", "이 종류는 글을 하나만 둘 수 있습니다. 기존 글을 수정해 주세요"),
 
     // 바로가기 링크 (LK)
     LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "LK001", "존재하지 않는 링크입니다"),
@@ -46,7 +47,8 @@ public enum ErrorCode {
     QUESTION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "QA002", "본인이 작성한 질문만 볼 수 있습니다"),
     ANSWERED_QUESTION_NOT_DELETABLE(HttpStatus.CONFLICT, "QA003", "답변이 달린 질문은 삭제할 수 없습니다"),
     ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "QA004", "이미 답변이 등록된 질문입니다"),
-    ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "QA005", "아직 답변이 없는 질문입니다");
+    ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "QA005", "아직 답변이 없는 질문입니다"),
+    ANSWERED_QUESTION_NOT_EDITABLE(HttpStatus.CONFLICT, "QA006", "답변이 달린 질문은 수정할 수 없습니다");
 
     private final HttpStatus status;
     private final String code;

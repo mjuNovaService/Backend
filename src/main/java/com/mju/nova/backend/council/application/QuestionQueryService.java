@@ -6,7 +6,8 @@ import com.mju.nova.backend.council.application.dto.AdminQuestionDetailResponse;
 import com.mju.nova.backend.council.application.dto.AdminQuestionSummaryResponse;
 import com.mju.nova.backend.council.application.dto.MyQuestionDetailResponse;
 import com.mju.nova.backend.council.application.dto.MyQuestionSummaryResponse;
-import com.mju.nova.backend.council.application.dto.PageResponse;
+import com.mju.nova.backend.common.response.PageRequests;
+import com.mju.nova.backend.common.response.PageResponse;
 import com.mju.nova.backend.council.domain.Answer;
 import com.mju.nova.backend.council.domain.AnswerRepository;
 import com.mju.nova.backend.council.domain.Question;
@@ -16,7 +17,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -29,8 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class QuestionQueryService {
-
-    private static final int MAX_PAGE_SIZE = 50;
 
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
@@ -89,10 +87,8 @@ public class QuestionQueryService {
                 .collect(Collectors.toSet());
     }
 
-    // 최신 질문이 위로. size는 1~50으로 제한해서 한 번에 너무 많이 못 가져가게 한다
+    // 최신 질문이 위로. page·size 보정은 공통 규칙(PageRequests)을 따른다
     private Pageable latestFirst(int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        return PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "id"));
+        return PageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
     }
 }
