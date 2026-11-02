@@ -593,6 +593,3 @@ AnswerCommandService.update(학번, questionId, 요청)   @Transactional
 - 목록 페이지 규칙은 공통(PageRequests): page 음수면 0, size는 1~50으로 보정, 에러 안 냄
 - 실패 응답 형식은 A 파트 ErrorResponse(`success:false, code, message, errors`)를 그대로 따름
 - 답변 없는 질문의 `"answer": null`은 의도한 동작 (프론트에서 null 처리)
-
-### 남은 것
-- 1개짜리 종류에 관리자 두 명이 동시에 등록하면 둘 다 들어갈 수 있음 (DB 제약 없음). 관리자 전용이라 일단 허용
