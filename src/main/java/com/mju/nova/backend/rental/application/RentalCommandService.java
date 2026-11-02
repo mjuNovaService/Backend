@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,6 +112,24 @@ public class RentalCommandService {
         releaseItem(rent);
         rentStatusHistoryRepository.save(RentStatusHistory.create(rent, before, rent.getStatus()));
         return RentalReturnResponse.from(rent);
+    }
+
+    /**
+     * SCH-01: 수령 시작 시각이 지난 예약 → 대여 중. 지난 날짜에 남은 예약도 같이 바꾼다.
+     * 학생의 취소와 겹치지 않도록 한 건씩 잠그고 상태를 다시 확인한다 (중복 실행해도 안전).
+     */
+    public int startDueRentals() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        int started = 0;
+        for (Long rentId : rentRepository.findIdsToStart(RentStatus.RESERVED, now.toLocalDate(), now.toLocalTime())) {
+            Optional<Rent> rent = rentRepository.findByIdForUpdate(rentId);
+            if (rent.isPresent() && rent.get().startRental(now)) {
+                rentStatusHistoryRepository.save(
+                        RentStatusHistory.create(rent.get(), RentStatus.RESERVED, RentStatus.RENTED));
+                started++;
+            }
+        }
+        return started;
     }
 
     // 있는 대여인가? → 내 대여인가? 스케줄러·다른 요청과 동시에 바꾸지 않도록 잠그고 가져온다

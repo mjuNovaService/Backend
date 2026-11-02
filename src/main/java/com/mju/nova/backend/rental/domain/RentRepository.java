@@ -1,6 +1,9 @@
 package com.mju.nova.backend.rental.domain;
 
 import jakarta.persistence.LockModeType;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +49,40 @@ public interface RentRepository extends JpaRepository<Rent, Long>, JpaSpecificat
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Rent r where r.id = :id")
     Optional<Rent> findByIdForUpdate(@Param("id") Long id);
+
+    // 알림 메일에 학생 이메일·물품명이 필요하다
+    @EntityGraph(attributePaths = {"student", "item"})
+    @Query("select r from Rent r where r.id = :id")
+    Optional<Rent> findWithStudentAndItemById(@Param("id") Long id);
+
+    // SCH-01: 수령 시작 시각이 지난 예약. 지난 날짜에 남은 예약도 같이 (서버가 꺼져 있어 놓친 경우)
+    @Query("""
+            select r.id from Rent r join r.slot s
+            where r.status = :status
+              and (r.pickupDate < :today or (r.pickupDate = :today and s.startTime <= :time))
+            """)
+    List<Long> findIdsToStart(@Param("status") RentStatus status, @Param("today") LocalDate today,
+                              @Param("time") LocalTime time);
+
+    // NOTI-01: 반납 기한이 정확히 그 시각인 대여 중 아직 그 종류 알림을 안 보낸 것
+    @Query("""
+            select r.id from Rent r
+            where r.status = :status and r.dueAt = :dueAt
+              and not exists (select n from NotificationLog n where n.rent = r and n.type = :type)
+            """)
+    List<Long> findIdsDueAtWithoutNotification(@Param("status") RentStatus status,
+                                               @Param("dueAt") LocalDateTime dueAt,
+                                               @Param("type") NotificationType type);
+
+    // NOTI-02: 반납 기한이 지난 대여 중 아직 그 종류 알림을 안 보낸 것
+    @Query("""
+            select r.id from Rent r
+            where r.status = :status and r.dueAt < :now
+              and not exists (select n from NotificationLog n where n.rent = r and n.type = :type)
+            """)
+    List<Long> findIdsOverdueWithoutNotification(@Param("status") RentStatus status,
+                                                 @Param("now") LocalDateTime now,
+                                                 @Param("type") NotificationType type);
 
     // 관리자 대여 목록. 학생·물품·슬롯·담당자를 한 번에 가져와 N+1을 막는다 (count 쿼리에는 적용되지 않음)
     @Override
