@@ -29,12 +29,12 @@ public class LocalDataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        createIfAbsent("60230001", "테스트학생", "test1@mju.ac.kr", StudentRole.STUDENT, ApprovalStatus.APPROVED);
-        createIfAbsent("60230002", "승인대기학생", "test2@mju.ac.kr", StudentRole.STUDENT, ApprovalStatus.PENDING);
-        createIfAbsent("60230003", "테스트회장", "test3@mju.ac.kr", StudentRole.PRESIDENT, ApprovalStatus.APPROVED);
+        createIfAbsent("60230001", "테스트학생", "test1@mju.ac.kr", "010-0000-0001", StudentRole.STUDENT, ApprovalStatus.APPROVED);
+        createIfAbsent("60230002", "승인대기학생", "test2@mju.ac.kr", "010-0000-0002", StudentRole.STUDENT, ApprovalStatus.PENDING);
+        createIfAbsent("60230003", "테스트회장", "test3@mju.ac.kr", "010-0000-0003", StudentRole.PRESIDENT, ApprovalStatus.APPROVED);
     }
 
-    private void createIfAbsent(String studentId, String name, String email,
+    private void createIfAbsent(String studentId, String name, String email, String phoneNum,
                                 StudentRole role, ApprovalStatus approvalStatus) {
         if (studentRepository.existsById(studentId)) {
             return;   // 이미 있으면 건너뜀 (서버를 다시 켜도 중복으로 넣지 않음)
@@ -43,6 +43,7 @@ public class LocalDataInitializer implements ApplicationRunner {
                 .id(studentId)
                 .name(name)
                 .email(email)
+                .phoneNum(phoneNum)
                 .password(passwordEncoder.encode(TEST_PASSWORD))
                 .department(approvalStatus == ApprovalStatus.APPROVED ? "융합소프트웨어학부" : null)
                 .role(role)

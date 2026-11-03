@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -61,6 +62,11 @@ public class EmailVerification extends BaseEntity {
     // 입력한 코드가 맞나
     public boolean matches(String inputCode) {
         return code.equals(inputCode);
+    }
+
+    // 인증을 마친 뒤 window(30분)가 지났나 → 회원가입 불가
+    public boolean isSignupWindowExpired(Duration window) {
+        return verifiedAt.plus(window).isBefore(LocalDateTime.now());
     }
 
     // 인증 완료 처리

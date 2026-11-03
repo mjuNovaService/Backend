@@ -7,12 +7,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -68,6 +71,30 @@ public class GlobalExceptionHandler {
                 new ErrorResponse.FieldError(e.getParameterName(), "필수 값입니다"));
         ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
         return ResponseEntity.status(errorCode.getStatus()).body(ErrorResponse.of(errorCode, errors));
+    }
+
+    // multipart 요청에서 필요한 칸(파일 등)을 안 보냄 → 400 C001
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException e) {
+        log.warn("MissingServletRequestPartException: {}", e.getRequestPartName());
+        List<ErrorResponse.FieldError> errors = List.of(
+                new ErrorResponse.FieldError(e.getRequestPartName(), "필수 값입니다"));
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        return ResponseEntity.status(errorCode.getStatus()).body(ErrorResponse.of(errorCode, errors));
+    }
+
+    // 업로드 파일이 너무 큼 (spring.servlet.multipart.max-file-size 초과) → 400 M005
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        log.warn("MaxUploadSizeExceededException: {}", e.getMessage());
+        return toResponse(ErrorCode.INVALID_CERTIFICATE_FILE);
+    }
+
+    // 요청 형식이 안 맞음 (multipart API에 JSON으로 보냄, multipart의 request 칸에 application/json을 안 붙임 등) → 415 C005
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        log.warn("HttpMediaTypeNotSupportedException: {}", e.getContentType());
+        return toResponse(ErrorCode.UNSUPPORTED_MEDIA_TYPE);
     }
 
     // 지원하지 않는 HTTP 메서드 (GET API에 POST 요청 등) → 405 C002
