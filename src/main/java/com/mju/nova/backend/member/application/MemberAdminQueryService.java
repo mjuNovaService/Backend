@@ -9,6 +9,8 @@ import com.mju.nova.backend.member.application.dto.CertificateFile;
 import com.mju.nova.backend.member.domain.ApprovalStatus;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
+import com.mju.nova.backend.member.domain.StudentRole;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -31,12 +33,22 @@ public class MemberAdminQueryService {
     private final CertificateStorage certificateStorage;
 
     // status: null이면 전체, PENDING이면 승인 대기만, APPROVED면 승인 완료만
-    public PageResponse<AdminMemberSummaryResponse> getMembers(ApprovalStatus status, int page, int size) {
+    // roles: null·빈 목록이면 전체, 있으면 그 역할만 (운영진 목록 = DIRECTOR, PRESIDENT)
+    public PageResponse<AdminMemberSummaryResponse> getMembers(ApprovalStatus status, List<StudentRole> roles,
+                                                               int page, int size) {
         // 가입 신청이 오래된 순 (먼저 신청한 학생부터 처리). 시각이 같으면 학번순
         Pageable pageable = PageRequests.of(page, size, Sort.by("createdAt").ascending().and(Sort.by("id")));
-        Page<Student> students = (status == null)
-                ? studentRepository.findByDeletedAtIsNull(pageable)
-                : studentRepository.findByApprovalStatusAndDeletedAtIsNull(status, pageable);
+        boolean allRoles = (roles == null || roles.isEmpty());
+        Page<Student> students;
+        if (allRoles) {
+            students = (status == null)
+                    ? studentRepository.findByDeletedAtIsNull(pageable)
+                    : studentRepository.findByApprovalStatusAndDeletedAtIsNull(status, pageable);
+        } else {
+            students = (status == null)
+                    ? studentRepository.findByRoleInAndDeletedAtIsNull(roles, pageable)
+                    : studentRepository.findByApprovalStatusAndRoleInAndDeletedAtIsNull(status, roles, pageable);
+        }
         return PageResponse.of(students, AdminMemberSummaryResponse::from);
     }
 

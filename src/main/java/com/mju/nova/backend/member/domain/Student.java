@@ -112,6 +112,16 @@ public class Student extends BaseEntity implements Persistable<String> {
         this.certificateImageKey = null;
     }
 
+    // 한 번이라도 로그인했나 (운영진 지정 조건 = 1회 이상 로그인을 한 계정인지?를 맞추려고 구현.)
+    public boolean hasLoggedIn() {
+        return firstLoginAt != null;
+    }
+
+    // 권한 변경 (운영진 지정 및 해제). 조건 검사는 Service에서 함
+    public void changeRole(StudentRole role) {
+        this.role = role;
+    }
+
     // 첫 로그인 시각 기록. 이미 있으면 덮어쓰지 않음. (인수인계 조건: 1회 이상 로그인한 계정)
     // 인수인계 조건 때문에 생성한 기능
     public void recordFirstLogin() {

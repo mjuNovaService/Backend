@@ -2,6 +2,7 @@ package com.mju.nova.backend.member.application.dto;
 
 import com.mju.nova.backend.member.domain.ApprovalStatus;
 import com.mju.nova.backend.member.domain.Student;
+import com.mju.nova.backend.member.domain.StudentRole;
 import java.time.LocalDateTime;
 
 /**
@@ -14,6 +15,8 @@ public record AdminMemberSummaryResponse(
         String phoneNum,
         String department,          // OCR이 읽은 학과. 못 읽었으면 null
         ApprovalStatus approvalStatus,
+        StudentRole role,
+        LocalDateTime firstLoginAt, // 첫 로그인 시각. null이면 로그인한 적 없음 → 운영진 지정 불가
         LocalDateTime appliedAt     // 가입 신청 시각 (student.created_at)
 ) {
     public static AdminMemberSummaryResponse from(Student student) {
@@ -24,6 +27,8 @@ public record AdminMemberSummaryResponse(
                 student.getPhoneNum(),
                 student.getDepartment(),
                 student.getApprovalStatus(),
+                student.getRole(),
+                student.getFirstLoginAt(),
                 student.getCreatedAt());
     }
 }

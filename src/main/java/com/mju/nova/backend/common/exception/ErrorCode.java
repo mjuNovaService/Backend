@@ -35,6 +35,8 @@ public enum ErrorCode {
     INVALID_CERTIFICATE_FILE(HttpStatus.BAD_REQUEST, "M005", "재학증명서 파일 형식 또는 크기가 올바르지 않습니다"),
     MEMBER_NOT_PENDING(HttpStatus.CONFLICT, "M006", "승인 대기 중인 회원이 아닙니다"),
     CERTIFICATE_NOT_FOUND(HttpStatus.NOT_FOUND, "M007", "재학증명서가 없습니다"),
+    STAFF_REQUIRES_LOGIN(HttpStatus.CONFLICT, "M008", "한 번 이상 로그인한 회원만 운영진으로 지정할 수 있습니다"),
+    LAST_PRESIDENT(HttpStatus.CONFLICT, "M009", "회장단은 최소 한 명 있어야 합니다"),
 
     // 학생회 소개 (IN)
     INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "IN001", "존재하지 않는 학생회 소개 글입니다"),

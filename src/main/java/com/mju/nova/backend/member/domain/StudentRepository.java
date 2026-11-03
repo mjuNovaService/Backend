@@ -1,5 +1,6 @@
 package com.mju.nova.backend.member.domain;
 
+import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,13 @@ public interface StudentRepository extends JpaRepository<Student, String> {
     Page<Student> findByDeletedAtIsNull(Pageable pageable);
 
     Page<Student> findByApprovalStatusAndDeletedAtIsNull(ApprovalStatus approvalStatus, Pageable pageable);
+
+    // role 필터 (운영진 목록: role IN (DIRECTOR, PRESIDENT))
+    Page<Student> findByRoleInAndDeletedAtIsNull(Collection<StudentRole> roles, Pageable pageable);
+
+    Page<Student> findByApprovalStatusAndRoleInAndDeletedAtIsNull(
+            ApprovalStatus approvalStatus, Collection<StudentRole> roles, Pageable pageable);
+
+    // 이 역할의 회원 수 (탈퇴 제외). 마지막 회장 보호용
+    long countByRoleAndDeletedAtIsNull(StudentRole role);
 }
