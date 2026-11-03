@@ -153,6 +153,9 @@ SemesterAdminController
 - 방학은 다음 학기에 붙임 (1~2월 → 1학기, 7~8월 → 2학기). 방학엔 대여 없음, 사물함 미리 신청만 가능
 - 학기 날짜 겹침 검사 없음 (자동 생성이라 겹칠 일 없음)
 - 사물함 신청 기간은 학기 밖(개강 전)이어도 허용
+- 사물함 신청 기간 기본값 없음. 새 학기는 신청 기간이 빈 상태(null)로 생기고, 운영진이 설정하기 전까지 사물함 신청 불가
+  - 프론트: `lockerApplyStart`가 null이면 "아직 신청 기간이 정해지지 않았어요" 안내
+  - 운영: 학기 초 체크리스트(SC-A3)에 "사물함 신청 기간 설정"을 넣어 누락 방지
 
 ### 다른 파트와 연결
 - B `CurrentSemesterReader`: TEMP 해제. `SemesterRepository.findByIsCurrentTrue()` 사용
