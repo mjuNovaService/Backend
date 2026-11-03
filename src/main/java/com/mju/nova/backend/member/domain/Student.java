@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(uniqueConstraints = {
@@ -20,7 +21,7 @@ import lombok.NoArgsConstructor;
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Student extends BaseEntity {
+public class Student extends BaseEntity implements Persistable<String> {
 
     // 학번 = 로그인 아이디. 자동 증가가 아니라 직접 입력하는 값이라 @GeneratedValue 없음
     @Id
@@ -38,7 +39,8 @@ public class Student extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column(length = 20)
+    // 회원가입 시 필수 (010-1234-5678 형식)
+    @Column(nullable = false, length = 20)
     private String phoneNum;
 
     // 재학증명서에서 인식한 학과. 인식 실패 시 관리자가 승인하며 입력
@@ -73,7 +75,8 @@ public class Student extends BaseEntity {
     // 회원 생성용. 비밀번호는 BCrypt로 해시한 값을 넣는다
     @Builder
     private Student(String id, String name, String email, String password, String phoneNum,
-                    String department, StudentRole role, ApprovalStatus approvalStatus) {
+                    String department, StudentRole role, ApprovalStatus approvalStatus,
+                    String certificateImageKey, LocalDateTime approvedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -82,6 +85,16 @@ public class Student extends BaseEntity {
         this.department = department;
         this.role = role;
         this.approvalStatus = approvalStatus;
+        this.certificateImageKey = certificateImageKey;
+        this.approvedAt = approvedAt;
+    }
+
+    // 기존에 이미 가입이 되어 있는 회원인지 확인.
+    // 학번은 회원이 넣는 값이라 비교가 불가능 => created_at 값 확인.
+    // 기존에 가입한 회원인데 다시 가입되어서 덮어 써지는 일을 막기 위해 구현함.
+    @Override
+    public boolean isNew() {
+        return getCreatedAt() == null;
     }
 
     // 탈퇴한 회원인가 (소프트 삭제: 행은 남기고 deletedAt만 기록)

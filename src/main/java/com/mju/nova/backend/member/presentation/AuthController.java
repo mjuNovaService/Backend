@@ -4,24 +4,31 @@ import com.mju.nova.backend.common.exception.BusinessException;
 import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.common.response.ApiResponse;
 import com.mju.nova.backend.member.application.AuthCommandService;
+import com.mju.nova.backend.member.application.MemberCommandService;
 import com.mju.nova.backend.member.application.dto.LoginResult;
 import com.mju.nova.backend.member.application.dto.ReissueResult;
+import com.mju.nova.backend.member.application.dto.SignupResponse;
 import com.mju.nova.backend.member.presentation.dto.LoginRequest;
 import com.mju.nova.backend.member.presentation.dto.LoginResponse;
 import com.mju.nova.backend.member.presentation.dto.ReissueResponse;
+import com.mju.nova.backend.member.presentation.dto.SignupRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "인증", description = "회원가입·로그인·토큰")
 @RestController
@@ -30,7 +37,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthCommandService authCommandService;
+    private final MemberCommandService memberCommandService;
     private final RefreshTokenCookieFactory cookieFactory;
+
+    @Operation(summary = "회원가입",
+            description = "이메일 인증 후 30분 안에 가입한다. multipart/form-data로 request(JSON, Content-Type: application/json)와 "
+                    + "certificate(재학증명서 PDF·JPG·PNG, 5MB 이하)를 보낸다. "
+                    + "재학증명서에서 대학·이름이 확인되면 APPROVED, 아니면 PENDING(관리자 확인 대기).")
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<SignupResponse>> signup(
+            // request 칸: JSON → SignupRequest로 바꾼 뒤 @Valid 검사
+            @RequestPart("request") @Valid SignupRequest request,
+            // certificate 칸: 업로드한 파일
+            @RequestPart("certificate") MultipartFile certificate) {
+        SignupResponse response = memberCommandService.signup(request.toCommand(), certificate);
+        // 새 회원이 만들어졌으므로 200이 아니라 201 Created
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
 
     @Operation(summary = "로그인",
             description = "학번과 비밀번호로 로그인한다. Access Token은 Body로, Refresh Token은 HttpOnly 쿠키로 발급한다.")

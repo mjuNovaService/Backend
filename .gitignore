@@ -1,4 +1,7 @@
 HELP.md
+
+### 업로드 파일 (로컬 저장 재학증명서) ###
+uploads/
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar

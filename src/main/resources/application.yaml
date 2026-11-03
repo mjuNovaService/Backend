@@ -3,6 +3,11 @@ spring:
     name: backend
   profiles:
     active: local
+  # 파일 업로드 크기 (재학증명서 5MB + 나머지 입력값)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 # JWT 공통 설정 (비밀키는 프로필별로 따로)
 jwt:
@@ -19,6 +24,16 @@ auth:
     code-expiration: 5m             # 인증코드 유효 시간 (발송 후)
     resend-cooldown: 60s            # 같은 이메일로 다시 보내려면 기다려야 하는 시간
     signup-window: 30m              # 인증 완료 후 회원가입까지 허용하는 시간 (회원가입 API에서 사용)
+  # 회원가입 설정
+  signup:
+    allowed-college: 인공지능소프트웨어융합대학   # 재학증명서의 '대학' (공백·점을 뺀 이름으로 비교)
+    initial-admin-email: ${INITIAL_ADMIN_EMAIL:}  # 이 이메일로 처음 가입한 계정이 회장 (비어 있으면 동작 안 함)
+    certificate-dir: ./uploads                   # PENDING 재학증명서 저장 폴더 (S3로 바꾸기 전 임시)
+
+# 재학증명서 OCR (Google Cloud Vision). 키가 비어 있으면 OCR을 건너뛰고 모두 PENDING
+google:
+  vision:
+    api-key: ${GOOGLE_VISION_API_KEY:}
 
 ---
 spring:
