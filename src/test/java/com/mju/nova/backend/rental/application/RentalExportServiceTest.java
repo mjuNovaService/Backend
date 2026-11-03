@@ -107,7 +107,7 @@ class RentalExportServiceTest {
 
         assertThat(Arrays.copyOf(file.content(), 3)).containsExactly(0xEF, 0xBB, 0xBF);
         assertThat(lines(file).get(0)).isEqualTo(
-                "대여번호,학번,이름,물품명,관리번호,수령일,슬롯,용도,상태,신청시각,대여시작시각,취소시각,반납기한,반납시각,연체반납여부");
+                "대여번호,학번,이름,물품명,관리번호,수령일,슬롯,용도,상태,신청시각,대여시작시각,취소시각,반납기한,반납시각,연체반납");
         assertThat(file.fileName()).isEqualTo("rentals_2026-2_20261105.csv");
         verify(rentStatusHistoryRepository, never()).findByRent_IdInOrderByCreatedAtAscIdAsc(anyCollection());
     }
@@ -126,7 +126,7 @@ class RentalExportServiceTest {
         CsvFile file = service.export(new RentalExportCondition(null, null, null, null, null));
 
         assertThat(lines(file).get(1)).isEqualTo("15,60231221,이하진,우산,2,2026-11-03,TUE 12:00~13:00,발표,RETURNED,"
-                + "2026-11-02 23:05:00,2026-11-03 12:00:01,,2026-11-04 18:00:00,2026-11-05 10:00:00,Y");
+                + "2026-11-02T23:05:00,2026-11-03T12:00:01,,2026-11-04T18:00:00,2026-11-05T10:00:00,Y");
     }
 
     @Test
@@ -142,8 +142,8 @@ class RentalExportServiceTest {
 
         List<String> lines = lines(service.export(new RentalExportCondition(null, null, null, null, null)));
 
-        assertThat(lines.get(1)).contains(",CANCELED,").contains(",,2026-11-03 09:00:00,");
-        assertThat(lines.get(2)).endsWith(",RESERVED,2026-11-02 23:05:00,,,2026-11-04 18:00:00,,");
+        assertThat(lines.get(1)).contains(",CANCELED,").contains(",,2026-11-03T09:00:00,");
+        assertThat(lines.get(2)).endsWith(",RESERVED,2026-11-02T23:05:00,,,2026-11-04T18:00:00,,");
         verify(rentStatusHistoryRepository, times(1)).findByRent_IdInOrderByCreatedAtAscIdAsc(anyCollection());
     }
 

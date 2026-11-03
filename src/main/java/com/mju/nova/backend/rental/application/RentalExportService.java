@@ -41,10 +41,11 @@ public class RentalExportService {
 
     static final List<String> HEADER = List.of(
             "대여번호", "학번", "이름", "물품명", "관리번호", "수령일", "슬롯", "용도", "상태",
-            "신청시각", "대여시작시각", "취소시각", "반납기한", "반납시각", "연체반납여부");
+            "신청시각", "대여시작시각", "취소시각", "반납기한", "반납시각", "연체반납");
 
     private static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    // 일시는 API 응답과 같은 형식 (명세 1번 시트: yyyy-MM-dd'T'HH:mm:ss)
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter FILE_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     // IN 절에 넣을 대여 번호 묶음 크기 (PostgreSQL 파라미터 개수 제한을 넘지 않게)
