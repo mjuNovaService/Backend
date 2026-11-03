@@ -8,6 +8,8 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.mju.nova.backend.common.mail.EmailSendException;
+import com.mju.nova.backend.common.mail.EmailSender;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.rental.domain.Item;
 import com.mju.nova.backend.rental.domain.NotificationLog;
@@ -35,7 +37,7 @@ class RentalNotificationSenderTest {
 
     @Mock RentRepository rentRepository;
     @Mock NotificationLogRepository notificationLogRepository;
-    @Mock MailSender mailSender;
+    @Mock EmailSender emailSender;
 
     @InjectMocks RentalNotificationSender sender;
 
@@ -50,7 +52,7 @@ class RentalNotificationSenderTest {
     @Test
     void 메일_발송에_실패하면_예외를_던지지_않고_FAILED로_남긴다() {
         given(rentRepository.findWithStudentAndItemById(1L)).willReturn(Optional.of(rentedRent()));
-        willThrow(new IllegalStateException("SMTP 오류")).given(mailSender).send(anyString(), anyString(), anyString());
+        willThrow(new EmailSendException("메일 발송에 실패했습니다", new RuntimeException("SMTP 오류"))).given(emailSender).send(anyString(), anyString(), anyString());
 
         sender.send(1L, NotificationType.OVERDUE);
 
@@ -69,7 +71,7 @@ class RentalNotificationSenderTest {
         ArgumentCaptor<NotificationLog> saved = ArgumentCaptor.forClass(NotificationLog.class);
         verify(notificationLogRepository).save(saved.capture());
         assertThat(saved.getValue().getStatus()).isEqualTo(SendStatus.SENT);
-        verify(mailSender).send(org.mockito.ArgumentMatchers.eq("test@mju.ac.kr"), anyString(), anyString());
+        verify(emailSender).send(org.mockito.ArgumentMatchers.eq("test@mju.ac.kr"), anyString(), anyString());
     }
 
     @Test
@@ -78,7 +80,7 @@ class RentalNotificationSenderTest {
 
         sender.send(1L, NotificationType.OVERDUE);
 
-        verify(mailSender, never()).send(anyString(), anyString(), anyString());
+        verify(emailSender, never()).send(anyString(), anyString(), anyString());
         verify(notificationLogRepository, never()).save(any());
     }
 
@@ -101,7 +103,7 @@ class RentalNotificationSenderTest {
 
         sender.resend(5L);
 
-        verify(mailSender, never()).send(anyString(), anyString(), anyString());
+        verify(emailSender, never()).send(anyString(), anyString(), anyString());
         assertThat(failed.getStatus()).isEqualTo(SendStatus.FAILED);
     }
 }

@@ -1,5 +1,6 @@
 package com.mju.nova.backend.rental.application;
 
+import com.mju.nova.backend.common.mail.EmailSender;
 import com.mju.nova.backend.rental.domain.Item;
 import com.mju.nova.backend.rental.domain.NotificationLog;
 import com.mju.nova.backend.rental.domain.NotificationLogRepository;
@@ -28,7 +29,8 @@ public class RentalNotificationSender {
 
     private final RentRepository rentRepository;
     private final NotificationLogRepository notificationLogRepository;
-    private final MailSender mailSender;
+    // 공통 메일 모듈 (A). local은 콘솔 출력, 그 외는 Gmail SMTP
+    private final EmailSender emailSender;
 
     // NOTI-01·02. (대여, 알림 종류)당 1번만 (uk_notification_log_rent_id_type)
     @Transactional
@@ -52,9 +54,10 @@ public class RentalNotificationSender {
 
     private SendStatus deliver(Rent rent, NotificationType type) {
         try {
-            mailSender.send(rent.getStudent().getEmail(), subject(type), body(rent, type));
+            emailSender.send(rent.getStudent().getEmail(), subject(type), body(rent, type));
             return SendStatus.SENT;
         } catch (Exception e) {
+            // 발송 실패(EmailSendException)뿐 아니라 예상 못 한 예외도 FAILED로 남겨 NOTI-RETRY가 다시 보내게 한다
             log.warn("반납 알림 발송 실패: rentId={}, type={}, reason={}", rent.getId(), type, e.getMessage());
             return SendStatus.FAILED;
         }

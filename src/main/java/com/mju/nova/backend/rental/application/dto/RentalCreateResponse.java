@@ -15,7 +15,6 @@ public record RentalCreateResponse(
         Long slotId,
         LocalDate pickupDate,
         DayOfWeek dayOfWeek,
-        // TEMP(담당: A): 명세는 HH:mm인데 기본 Jackson은 LocalTime을 HH:mm:ss로 내보낸다. B는 따로 설정하지 않음 / A의 Jackson 전역 설정에 LocalTime HH:mm이 들어가면 이 주석만 지운다 (rental·slot 응답 DTO 공통)
         LocalTime pickupStart,
         LocalTime pickupEnd,
         LocalDateTime dueAt,
