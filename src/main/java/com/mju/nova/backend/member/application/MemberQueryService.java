@@ -20,7 +20,9 @@ public class MemberQueryService {
     private final StudentRepository studentRepository;
 
     public MyInfoResponse getMyInfo(String studentId) {
+        // 탈퇴한 회원은 없는 회원으로 처리
         Student student = studentRepository.findById(studentId)
+                .filter(s -> !s.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         return MyInfoResponse.from(student);
     }
