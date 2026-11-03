@@ -1,4 +1,4 @@
-package com.mju.nova.backend.rental.domain;
+package com.mju.nova.backend.slot.domain;
 
 import com.mju.nova.backend.common.entity.BaseEntity;
 import com.mju.nova.backend.member.domain.Student;
@@ -57,4 +57,36 @@ public class Slot extends BaseEntity {
     // true: 열림(기본값), false: 닫힘
     @Column(nullable = false)
     private Boolean status;
+
+    // 새 슬롯은 열린 상태
+    public static Slot create(Semester semester, Student manager, DayOfWeek dayOfWeek,
+                              LocalTime startTime, LocalTime endTime) {
+        Slot slot = new Slot();
+        slot.semester = semester;
+        slot.manager = manager;
+        slot.dayOfWeek = dayOfWeek;
+        slot.startTime = startTime;
+        slot.endTime = endTime;
+        slot.status = true;
+        return slot;
+    }
+
+    public boolean isOpen() {
+        return Boolean.TRUE.equals(status);
+    }
+
+    // 예약이 걸린 슬롯은 서비스가 막는다 (SL007)
+    public void changeTime(LocalTime startTime, LocalTime endTime) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
+    public void changeManager(Student manager) {
+        this.manager = manager;
+    }
+
+    // 닫아도 기존 예약은 그대로. 새 대여 신청만 막힌다 (SL002)
+    public void changeStatus(boolean open) {
+        this.status = open;
+    }
 }

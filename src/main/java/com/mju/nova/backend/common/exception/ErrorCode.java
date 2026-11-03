@@ -50,7 +50,38 @@ public enum ErrorCode {
     ANSWERED_QUESTION_NOT_DELETABLE(HttpStatus.CONFLICT, "QA003", "답변이 달린 질문은 삭제할 수 없습니다"),
     ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "QA004", "이미 답변이 등록된 질문입니다"),
     ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "QA005", "아직 답변이 없는 질문입니다"),
-    ANSWERED_QUESTION_NOT_EDITABLE(HttpStatus.CONFLICT, "QA006", "답변이 달린 질문은 수정할 수 없습니다");
+    ANSWERED_QUESTION_NOT_EDITABLE(HttpStatus.CONFLICT, "QA006", "답변이 달린 질문은 수정할 수 없습니다"),
+
+    // 대여 (R)
+    RENTAL_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "대여 내역을 찾을 수 없습니다"),
+    RENTAL_ACCESS_DENIED(HttpStatus.FORBIDDEN, "R002", "본인의 대여 내역만 접근할 수 있습니다"),
+    RENT_DATE_SLOT_MISMATCH(HttpStatus.BAD_REQUEST, "R003", "수령 날짜의 요일이 슬롯 요일과 다릅니다"),
+    RENT_DATE_OUT_OF_SEMESTER(HttpStatus.BAD_REQUEST, "R004", "현재 학기 기간이 아닌 날짜입니다"),
+    RENT_APPLY_CLOSED(HttpStatus.BAD_REQUEST, "R005", "이미 지났거나 시작된 수령 시간입니다"),
+    ITEM_OUT_OF_STOCK(HttpStatus.CONFLICT, "R006", "대여 가능한 물품이 없습니다"),
+    RENTAL_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "R008", "이미 진행 중인 대여가 있습니다"),
+    RENTAL_NOT_CANCELABLE(HttpStatus.CONFLICT, "R009", "취소할 수 없는 대여입니다"),
+    RENTAL_NOT_RETURNABLE(HttpStatus.CONFLICT, "R010", "반납할 수 없는 대여입니다"),
+    RENT_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "R011", "예약할 수 없는 날짜입니다"),
+
+    // 수령 슬롯 (SL)
+    SLOT_NOT_FOUND(HttpStatus.NOT_FOUND, "SL001", "수령 시간을 찾을 수 없습니다"),
+    SLOT_CLOSED(HttpStatus.BAD_REQUEST, "SL002", "운영하지 않는 수령 시간입니다"),
+    SLOT_NOT_IN_CURRENT_SEMESTER(HttpStatus.BAD_REQUEST, "SL003", "현재 학기 수령 시간이 아닙니다"),
+    DUPLICATE_SLOT(HttpStatus.CONFLICT, "SL004", "같은 요일·시작 시각의 수령 시간이 이미 있습니다"),
+    INVALID_SLOT_TIME(HttpStatus.BAD_REQUEST, "SL005", "시작 시각은 종료 시각보다 빨라야 합니다"),
+    SLOT_MANAGER_NOT_ADMIN(HttpStatus.BAD_REQUEST, "SL006", "담당자는 운영진만 지정할 수 있습니다"),
+    SLOT_HAS_RESERVATION(HttpStatus.CONFLICT, "SL007", "예약이 걸린 수령 시간은 시각을 바꿀 수 없습니다"),
+
+    // 물품 (I)
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "I001", "물품을 찾을 수 없습니다"),
+    ITEM_NAME_NOT_FOUND(HttpStatus.NOT_FOUND, "I002", "존재하지 않는 물품입니다"),
+    DUPLICATE_ITEM_NUMBER(HttpStatus.CONFLICT, "I003", "이미 등록된 관리 번호입니다"),
+    ITEM_IN_USE(HttpStatus.CONFLICT, "I004", "예약이 걸린 물품입니다"),
+    ITEM_PERIOD_MISMATCH(HttpStatus.BAD_REQUEST, "I005", "같은 물품명의 대여 일수와 다릅니다"),
+
+    // 학기 (SE). 학기 API를 만드는 A도 같이 사용
+    CURRENT_SEMESTER_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "현재 학기가 설정되지 않았습니다");
 
     private final HttpStatus status;
     private final String code;

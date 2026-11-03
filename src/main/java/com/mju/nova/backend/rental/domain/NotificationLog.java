@@ -42,4 +42,17 @@ public class NotificationLog extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SendStatus status;
+
+    public static NotificationLog create(Rent rent, NotificationType type, SendStatus status) {
+        NotificationLog notificationLog = new NotificationLog();
+        notificationLog.rent = rent;
+        notificationLog.type = type;
+        notificationLog.status = status;
+        return notificationLog;
+    }
+
+    // 재발송 결과로 같은 행의 상태를 바꾼다 (대여·종류별 1행 유지)
+    public void changeStatus(SendStatus status) {
+        this.status = status;
+    }
 }
