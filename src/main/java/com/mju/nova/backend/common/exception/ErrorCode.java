@@ -80,7 +80,8 @@ public enum ErrorCode {
     ITEM_PERIOD_MISMATCH(HttpStatus.BAD_REQUEST, "I005", "같은 물품명의 대여 일수와 다릅니다"),
 
     // 학기 (SE). 학기 API를 만드는 A도 같이 사용
-    CURRENT_SEMESTER_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "현재 학기가 설정되지 않았습니다");
+    CURRENT_SEMESTER_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "현재 학기가 설정되지 않았습니다"),
+    INVALID_LOCKER_APPLY_PERIOD(HttpStatus.BAD_REQUEST, "SE002", "사물함 신청 시작은 종료보다 빨라야 합니다");
 
     private final HttpStatus status;
     private final String code;
