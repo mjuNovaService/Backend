@@ -13,7 +13,6 @@ import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,26 +37,34 @@ public class RentalUnavailableEventService {
         eventRepository.save(RentalUnavailableEvent.create(itemName, reason));
     }
 
+    // 건수 내림차순 → 물품명 가나다순 → 사유(OUT_OF_STOCK, NO_SLOT) 순
+    static final Comparator<UnavailableEventCount> BY_COUNT_DESC =
+            Comparator.comparing(UnavailableEventCount::count, Comparator.reverseOrder())
+                    .thenComparing(UnavailableEventCount::itemName)
+                    .thenComparing(UnavailableEventCount::reason);
+
     /**
-     * from·to(양 끝 포함)를 생략하면 현재 학기 시작일·종료일. 현재 학기도 없어서 기간을 못 정하면 빈 목록.
-     * 물품명 가나다순 → 사유(OUT_OF_STOCK, NO_SLOT) 순.
+     * from·to(양 끝 포함)를 생략하면 현재 학기 시작일·종료일. 현재 학기가 없는데 생략하면 404 SE001.
+     * 둘 다 넘기면 현재 학기를 보지 않는다.
      */
     @Transactional(readOnly = true)
-    public List<UnavailableEventSummaryResponse> summarize(LocalDate from, LocalDate to) {
-        Optional<Semester> semester = currentSemesterReader.find();
-        LocalDate start = from != null ? from : semester.map(Semester::getStartDate).orElse(null);
-        LocalDate end = to != null ? to : semester.map(Semester::getEndDate).orElse(null);
+    public UnavailableEventSummaryResponse summarize(LocalDate from, LocalDate to) {
+        LocalDate start = from;
+        LocalDate end = to;
         if (start == null || end == null) {
-            return List.of();
+            Semester semester = currentSemesterReader.get();
+            start = start != null ? start : semester.getStartDate();
+            end = end != null ? end : semester.getEndDate();
         }
         if (start.isAfter(end)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
-        return eventRepository.countByItemNameAndReason(start.atStartOfDay(), end.plusDays(1).atStartOfDay())
+        List<UnavailableEventSummaryResponse.Item> items = eventRepository
+                .countByItemNameAndReason(start.atStartOfDay(), end.plusDays(1).atStartOfDay())
                 .stream()
-                .sorted(Comparator.comparing(UnavailableEventCount::itemName)
-                        .thenComparing(UnavailableEventCount::reason))
-                .map(UnavailableEventSummaryResponse::from)
+                .sorted(BY_COUNT_DESC)
+                .map(UnavailableEventSummaryResponse.Item::from)
                 .toList();
+        return new UnavailableEventSummaryResponse(start, end, items);
     }
 }

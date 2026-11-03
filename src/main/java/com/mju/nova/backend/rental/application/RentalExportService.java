@@ -60,13 +60,13 @@ public class RentalExportService {
         if (condition.from() != null && condition.to() != null && condition.from().isAfter(condition.to())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
-        // semesterId가 없으면 현재 학기. 학기를 못 찾으면 헤더만 있는 파일
+        // semesterId가 없으면 현재 학기 (없으면 404 SE001). 넘긴 semesterId의 학기가 없으면 헤더만 있는 파일
         Optional<Semester> semester = condition.semesterId() != null
                 ? semesterRepository.findById(condition.semesterId())
-                : currentSemesterReader.find();
+                : Optional.of(currentSemesterReader.get());
+        // 수령일 오름차순, 같으면 대여 번호 오름차순
         List<Rent> rents = semester
-                .map(target -> rentRepository.findAll(filter(condition, target.getId()),
-                        Sort.by("pickupDate", "createdAt", "id")))
+                .map(target -> rentRepository.findAll(filter(condition, target.getId()), Sort.by("pickupDate", "id")))
                 .orElse(List.of());
         Map<Long, List<RentStatusHistory>> histories = historiesOf(rents);
 

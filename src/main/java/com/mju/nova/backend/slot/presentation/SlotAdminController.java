@@ -36,14 +36,15 @@ public class SlotAdminController {
     private final SlotQueryService slotQueryService;
     private final SlotCommandService slotCommandService;
 
-    @Operation(summary = "슬롯 목록", description = "semesterId를 생략하면 현재 학기. 닫힌 슬롯도 포함. 요일 → 시작 시각 순.")
+    @Operation(summary = "슬롯 목록",
+            description = "semesterId를 생략하면 현재 학기 (없으면 404 SE001). 닫힌 슬롯도 포함, reservedCount = 걸린 예약 수. 요일 → 시작 시각 순.")
     @GetMapping
     public ApiResponse<List<AdminSlotResponse>> getSlots(@RequestParam(required = false) Long semesterId) {
         return ApiResponse.success(slotQueryService.getSlots(semesterId));
     }
 
     @Operation(summary = "슬롯 등록",
-            description = "현재 학기에 열린 상태로 등록. 같은 요일·시작 시각이면 409 SL004, 담당자가 운영진이 아니면 400 SL006.")
+            description = "현재 학기에 열린 상태로 등록 (현재 학기가 없으면 404 SE001). 같은 요일·시작 시각이면 409 SL004, 담당자가 운영진이 아니면 400 SL006.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<AdminSlotResponse> create(@RequestBody @Valid SlotCreateRequest request) {

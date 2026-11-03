@@ -195,6 +195,7 @@ class RentalCommandServiceTest {
 
         assertThatThrownBy(() -> service().apply(STUDENT_ID, "충전기", SLOT_ID, TODAY, null))
                 .extracting("errorCode").isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
-        verify(itemRepository, never()).findRentableForUpdate(any(), any());
+        // 명세 순서: 회원 확인(M001)이 슬롯 검사보다 먼저
+        verify(slotRepository, never()).findByIdForShare(any());
     }
 }

@@ -33,6 +33,19 @@ public interface RentRepository extends JpaRepository<Rent, Long>, JpaSpecificat
     // 슬롯 시각 변경 전 확인: 예약이 걸린 슬롯인가
     boolean existsBySlot_IdAndStatus(Long slotId, RentStatus status);
 
+    // 관리자 슬롯 응답의 reservedCount (슬롯 1개)
+    long countBySlot_IdAndStatus(Long slotId, RentStatus status);
+
+    // 관리자 슬롯 목록의 reservedCount. 슬롯마다 세면 N+1이라 한 번에 묶어 센다 (대여가 없는 슬롯은 결과에 없음 = 0)
+    @Query("""
+            select new com.mju.nova.backend.rental.domain.SlotReservedCount(r.slot.id, count(r))
+            from Rent r
+            where r.slot.id in :slotIds and r.status = :status
+            group by r.slot.id
+            """)
+    List<SlotReservedCount> countBySlotIds(@Param("slotIds") Collection<Long> slotIds,
+                                           @Param("status") RentStatus status);
+
     // 관리자 물품 목록의 currentRent. 물품마다 따로 조회하면 N+1이라 한 번에 가져온다
     @EntityGraph(attributePaths = "student")
     List<Rent> findByItem_IdInAndStatusIn(Collection<Long> itemIds, Collection<RentStatus> statuses);

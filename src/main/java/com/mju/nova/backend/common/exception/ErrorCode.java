@@ -76,7 +76,10 @@ public enum ErrorCode {
     ITEM_NAME_NOT_FOUND(HttpStatus.NOT_FOUND, "I002", "존재하지 않는 물품입니다"),
     DUPLICATE_ITEM_NUMBER(HttpStatus.CONFLICT, "I003", "이미 등록된 관리 번호입니다"),
     ITEM_IN_USE(HttpStatus.CONFLICT, "I004", "예약이 걸린 물품입니다"),
-    ITEM_PERIOD_MISMATCH(HttpStatus.BAD_REQUEST, "I005", "같은 물품명의 대여 일수와 다릅니다");
+    ITEM_PERIOD_MISMATCH(HttpStatus.BAD_REQUEST, "I005", "같은 물품명의 대여 일수와 다릅니다"),
+
+    // 학기 (SE). 학기 API를 만드는 A도 같이 사용
+    CURRENT_SEMESTER_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "현재 학기가 설정되지 않았습니다");
 
     private final HttpStatus status;
     private final String code;

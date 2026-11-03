@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.mju.nova.backend.common.exception.BusinessException;
 import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
@@ -52,7 +53,7 @@ class SlotCommandServiceTest {
     void setUp() {
         semester = mock(Semester.class);
         given(semester.getId()).willReturn(1L);
-        given(currentSemesterReader.find()).willReturn(Optional.of(semester));
+        given(currentSemesterReader.get()).willReturn(semester);
         director = Student.builder().id("60230009").name("국장").role(StudentRole.DIRECTOR).build();
         given(studentRepository.findById("60230009")).willReturn(Optional.of(director));
         given(slotRepository.saveAndFlush(any(Slot.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -60,6 +61,7 @@ class SlotCommandServiceTest {
 
     private Slot existingSlot() {
         Slot slot = Slot.create(semester, director, DayOfWeek.TUE, NOON, ONE_PM);
+        ReflectionTestUtils.setField(slot, "id", 3L);
         given(slotRepository.findByIdForUpdate(3L)).willReturn(Optional.of(slot));
         return slot;
     }
@@ -69,7 +71,18 @@ class SlotCommandServiceTest {
         var response = slotCommandService.create(DayOfWeek.TUE, NOON, ONE_PM, "60230009");
 
         assertThat(response.status()).isTrue();
+        assertThat(response.semesterId()).isEqualTo(1L);
         assertThat(response.manager().studentId()).isEqualTo("60230009");
+        assertThat(response.reservedCount()).isZero();
+    }
+
+    @Test
+    void 현재_학기가_없으면_담당자_확인_전에_SE001() {
+        given(currentSemesterReader.get()).willThrow(new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
+
+        assertThatThrownBy(() -> slotCommandService.create(DayOfWeek.TUE, NOON, ONE_PM, "99999999"))
+                .extracting("errorCode").isEqualTo(ErrorCode.CURRENT_SEMESTER_NOT_FOUND);
+        verify(studentRepository, never()).findById(any());
     }
 
     @Test
@@ -124,6 +137,27 @@ class SlotCommandServiceTest {
         assertThatThrownBy(() -> slotCommandService.update(3L, LocalTime.of(12, 30), null, null))
                 .extracting("errorCode").isEqualTo(ErrorCode.SLOT_HAS_RESERVATION);
         assertThat(slot.getStartTime()).isEqualTo(NOON);
+    }
+
+    @Test
+    void 시각_변경은_담당자보다_먼저_검사한다_SL007() {
+        existingSlot();
+        given(rentRepository.existsBySlot_IdAndStatus(3L, RentStatus.RESERVED)).willReturn(true);
+
+        // 없는 학번(M001)을 같이 보내도 예약이 걸린 시각 변경(SL007)이 먼저
+        assertThatThrownBy(() -> slotCommandService.update(3L, LocalTime.of(12, 30), null, "99999999"))
+                .extracting("errorCode").isEqualTo(ErrorCode.SLOT_HAS_RESERVATION);
+    }
+
+    @Test
+    void 닫으면_걸린_예약_수를_같이_돌려준다() {
+        existingSlot();
+        given(rentRepository.countBySlot_IdAndStatus(3L, RentStatus.RESERVED)).willReturn(2L);
+
+        var response = slotCommandService.changeStatus(3L, false);
+
+        assertThat(response.status()).isFalse();
+        assertThat(response.reservedCount()).isEqualTo(2L);
     }
 
     @Test

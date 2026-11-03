@@ -32,33 +32,30 @@ public class SlotCommandService {
     private final RentRepository rentRepository;
     private final CurrentSemesterReader currentSemesterReader;
 
-    // 학기는 현재 학기, 처음엔 열린 상태
+    // 학기는 현재 학기, 처음엔 열린 상태. 검사 순서는 명세 8. 수령 시간 등록 처리 규칙 순서 그대로
     public AdminSlotResponse create(DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime,
                                     String managerStudentId) {
         validateTime(startTime, endTime);
+        Semester semester = currentSemesterReader.get();
         Student manager = findManager(managerStudentId);
-        // 현재 학기가 없으면 대여 신청과 같이 SL003
-        Semester semester = currentSemesterReader.find()
-                .orElseThrow(() -> new BusinessException(ErrorCode.SLOT_NOT_IN_CURRENT_SEMESTER));
         if (slotRepository.existsBySemester_IdAndDayOfWeekAndStartTime(semester.getId(), dayOfWeek, startTime)) {
             throw new BusinessException(ErrorCode.DUPLICATE_SLOT);
         }
         try {
             // 동시에 같은 슬롯이 들어온 경우 UK(uk_slot_semester_id_day_of_week_start_time) 위반을 여기서 잡는다
             Slot slot = slotRepository.saveAndFlush(Slot.create(semester, manager, dayOfWeek, startTime, endTime));
-            return AdminSlotResponse.from(slot);
+            return AdminSlotResponse.of(slot, 0);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DUPLICATE_SLOT);
         }
     }
 
-    // PATCH: null인 칸은 그대로. 요일은 바꾸지 않는다
+    // PATCH: null인 칸은 그대로. 요일은 바꾸지 않는다. 검사 순서는 명세 8. 수령 시간 수정 처리 규칙 순서 그대로
     public AdminSlotResponse update(Long slotId, LocalTime startTime, LocalTime endTime, String managerStudentId) {
         Slot slot = findSlotForUpdate(slotId);
         LocalTime newStart = startTime != null ? startTime : slot.getStartTime();
         LocalTime newEnd = endTime != null ? endTime : slot.getEndTime();
         validateTime(newStart, newEnd);
-        Student manager = managerStudentId != null ? findManager(managerStudentId) : null;
 
         boolean timeChanged = !newStart.equals(slot.getStartTime()) || !newEnd.equals(slot.getEndTime());
         if (timeChanged) {
@@ -72,8 +69,8 @@ public class SlotCommandService {
             }
             slot.changeTime(newStart, newEnd);
         }
-        if (manager != null) {
-            slot.changeManager(manager);
+        if (managerStudentId != null) {
+            slot.changeManager(findManager(managerStudentId));
         }
 
         try {
@@ -81,15 +78,19 @@ public class SlotCommandService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DUPLICATE_SLOT);
         }
-        return AdminSlotResponse.from(slot);
+        return toResponse(slot);
     }
 
-    // 닫아도 기존 예약은 그대로 두고, 새 대여 신청만 SL002로 막힌다
+    // 닫아도 기존 예약은 그대로 두고, 새 대여 신청만 SL002로 막힌다. 응답의 reservedCount로 연락할 학생이 있는지 본다
     public AdminSlotResponse changeStatus(Long slotId, boolean open) {
         Slot slot = findSlotForUpdate(slotId);
         slot.changeStatus(open);
         slotRepository.flush();
-        return AdminSlotResponse.from(slot);
+        return toResponse(slot);
+    }
+
+    private AdminSlotResponse toResponse(Slot slot) {
+        return AdminSlotResponse.of(slot, rentRepository.countBySlot_IdAndStatus(slot.getId(), RentStatus.RESERVED));
     }
 
     private void validateTime(LocalTime startTime, LocalTime endTime) {

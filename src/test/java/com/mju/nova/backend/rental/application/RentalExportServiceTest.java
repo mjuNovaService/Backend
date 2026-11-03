@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.mju.nova.backend.common.exception.BusinessException;
 import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.rental.application.dto.CsvFile;
@@ -37,6 +38,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -66,7 +68,7 @@ class RentalExportServiceTest {
         Semester semester = mock(Semester.class);
         given(semester.getId()).willReturn(1L);
         given(semester.getName()).willReturn("2026-2");
-        given(currentSemesterReader.find()).willReturn(Optional.of(semester));
+        given(currentSemesterReader.get()).willReturn(semester);
         Clock clock = Clock.fixed(LocalDateTime.of(2026, 11, 5, 9, 0).atZone(SEOUL).toInstant(), SEOUL);
         service = new RentalExportService(rentRepository, rentStatusHistoryRepository, semesterRepository,
                 currentSemesterReader, clock);
@@ -162,7 +164,27 @@ class RentalExportServiceTest {
     }
 
     @Test
-    void 학기를_못_찾으면_헤더만_있는_파일() {
+    @SuppressWarnings("unchecked")
+    void 수령일_오름차순_같으면_대여번호_오름차순() {
+        givenRents();
+
+        service.export(new RentalExportCondition(null, null, null, null, null));
+
+        ArgumentCaptor<Sort> sort = ArgumentCaptor.forClass(Sort.class);
+        verify(rentRepository).findAll(any(Specification.class), sort.capture());
+        assertThat(sort.getValue()).isEqualTo(Sort.by("pickupDate", "id"));
+    }
+
+    @Test
+    void 학기를_생략했는데_현재_학기가_없으면_SE001() {
+        given(currentSemesterReader.get()).willThrow(new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
+
+        assertThatThrownBy(() -> service.export(new RentalExportCondition(null, null, null, null, null)))
+                .extracting("errorCode").isEqualTo(ErrorCode.CURRENT_SEMESTER_NOT_FOUND);
+    }
+
+    @Test
+    void 넘긴_학기가_없으면_헤더만_있는_파일() {
         given(semesterRepository.findById(99L)).willReturn(Optional.empty());
 
         CsvFile file = service.export(new RentalExportCondition(99L, null, null, null, null));

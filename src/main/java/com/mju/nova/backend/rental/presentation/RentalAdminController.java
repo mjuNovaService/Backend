@@ -63,7 +63,7 @@ public class RentalAdminController {
     }
 
     @Operation(summary = "대여 이력 CSV 내보내기",
-            description = "KPI 집계용. semesterId를 생략하면 현재 학기, from·to는 수령일 기준 기간(양 끝 포함). "
+            description = "KPI 집계용. semesterId를 생략하면 현재 학기(없으면 404 SE001), from·to는 수령일 기준 기간(양 끝 포함). "
                     + "페이지 없이 전체를 text/csv(UTF-8 BOM)로 내려준다. ApiResponse로 감싸지 않음.")
     // produces를 걸지 않는다: 걸면 C001 같은 실패 응답(JSON)이 Accept 협상에 걸릴 수 있어서 Content-Type만 직접 지정
     @GetMapping("/export")
@@ -82,9 +82,9 @@ public class RentalAdminController {
     }
 
     @Operation(summary = "대여 불가 이벤트 집계",
-            description = "KPI K4. from·to(양 끝 포함)를 생략하면 현재 학기 기간. 물품명·사유별 건수, 물품명 가나다순.")
+            description = "KPI K4. from·to(양 끝 포함)를 생략하면 현재 학기 기간 (현재 학기가 없으면 404 SE001). 물품명·사유별 건수, 건수 내림차순.")
     @GetMapping("/unavailable-events/summary")
-    public ApiResponse<List<UnavailableEventSummaryResponse>> getUnavailableEventSummary(
+    public ApiResponse<UnavailableEventSummaryResponse> getUnavailableEventSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ApiResponse.success(rentalUnavailableEventService.summarize(from, to));
