@@ -32,7 +32,9 @@ public class AuthCommandService {
 
     public LoginResult login(String studentId, String password) {
         // 1. 학번으로 회원 조회. 없어도 "학번 또는 비밀번호 불일치"로 응답해 가입 여부를 숨김.
+        // 탈퇴한 회원도 "학번 또는 비밀번호 불일치"로 처리 (탈퇴 여부를 따로 알려주지 않음)
         Student student = studentRepository.findById(studentId)
+                .filter(s -> !s.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
         // 2. 입력한 비밀번호와 DB의 BCrypt 해시 비교
@@ -42,6 +44,9 @@ public class AuthCommandService {
 
         // 3. 승인 상태 확인 (PENDING·REJECTED는 토큰을 주지 않음)
         checkApprovalStatus(student);
+
+        // 첫 로그인 시각 기록 (값만 바꾸면 트랜잭션이 끝날 때 변경 감지로 UPDATE)
+        student.recordFirstLogin();
 
         // 4. 토큰 발급
         String role = student.getRole().name();
@@ -71,8 +76,9 @@ public class AuthCommandService {
             throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 3. 회원 조회
+        // 3. 회원 조회 (탈퇴한 회원은 없는 회원으로 처리)
         Student student = studentRepository.findById(studentId)
+                .filter(s -> !s.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 4. 승인 상태 확인 (로그인 후 관리자가 상태를 바꿨을 수 있음)

@@ -30,7 +30,7 @@ public enum ErrorCode {
 
     // 회원 (M)
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "존재하지 않는 회원입니다"),
-    MEMBER_REJECTED(HttpStatus.FORBIDDEN, "M002", "승인이 거절되었습니다"),
+    MEMBER_REJECTED(HttpStatus.FORBIDDEN, "M002", "승인이 반려되었습니다"),
     MEMBER_PENDING(HttpStatus.FORBIDDEN, "M003", "승인 대기 중입니다"),
     STUDENT_ID_ALREADY_REGISTERED(HttpStatus.CONFLICT, "M004", "이미 가입된 학번입니다"),
     INVALID_CERTIFICATE_FILE(HttpStatus.BAD_REQUEST, "M005", "재학증명서 파일 형식 또는 크기가 올바르지 않습니다"),
