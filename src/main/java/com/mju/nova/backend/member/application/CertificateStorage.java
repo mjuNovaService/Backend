@@ -1,5 +1,7 @@
 package com.mju.nova.backend.member.application;
 
+import java.util.Optional;
+import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -11,6 +13,9 @@ public interface CertificateStorage {
 
     // 저장하고 키를 돌려준다. 예: "certificates/60231210/3f2a....pdf"
     String store(String studentId, MultipartFile file);
+
+    // 보관한 파일 읽기 (관리자 확인용). 파일이 없으면 빈 Optional
+    Optional<Resource> load(String key);
 
     void delete(String key);
 }

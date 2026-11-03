@@ -42,7 +42,7 @@ public class AuthCommandService {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-        // 3. 승인 상태 확인 (PENDING·REJECTED는 토큰을 주지 않음)
+        // 3. 승인 상태 확인 (PENDING은 토큰을 주지 않음. 반려된 회원은 삭제돼서 1번에서 걸림)
         checkApprovalStatus(student);
 
         // 첫 로그인 시각 기록 (값만 바꾸면 트랜잭션이 끝날 때 변경 감지로 UPDATE)
@@ -103,7 +103,6 @@ public class AuthCommandService {
     private void checkApprovalStatus(Student student) {
         switch (student.getApprovalStatus()) {
             case PENDING -> throw new BusinessException(ErrorCode.MEMBER_PENDING);
-            case REJECTED -> throw new BusinessException(ErrorCode.MEMBER_REJECTED);
             case APPROVED -> {
                 // 통과
             }
