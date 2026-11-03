@@ -83,4 +83,17 @@ public class Student extends BaseEntity {
         this.role = role;
         this.approvalStatus = approvalStatus;
     }
+
+    // 탈퇴한 회원인가 (소프트 삭제: 행은 남기고 deletedAt만 기록)
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    // 첫 로그인 시각 기록. 이미 있으면 덮어쓰지 않음. (인수인계 조건: 1회 이상 로그인한 계정)
+    // 인수인계 조건 때문에 생성한 기능
+    public void recordFirstLogin() {
+        if (firstLoginAt == null) {
+            firstLoginAt = LocalDateTime.now();
+        }
+    }
 }

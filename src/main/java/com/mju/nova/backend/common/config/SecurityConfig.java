@@ -59,8 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/rentals/unavailable-events").permitAll()
                         // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)
                         .requestMatchers("/api/rentals/**").authenticated()
-                        // TODO(로그인 파트): 다른 파트 API도 로그인이 필요해지면 authenticated()로 바꾸고,
-                        //  /api/admin/** 는 관리자만 허용. 회원가입 API가 생기기 전까지 다른 파트 개발이 막히지 않게 임시로 열기.
+                        // 그 외는 지금 공개. 각 파트가 로그인이 필요한 경로를 위에 authenticated()로 추가함.
+                        // (예: 대여 파트는 rental 구현 때 /api/rentals/** 추가 — 통합 명세 v8 12번 시트)
                         .anyRequest().permitAll())
 
                 // 401·403도 ErrorResponse 형식으로 응답
