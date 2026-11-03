@@ -42,6 +42,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * DB 없이 대여 신청 규칙을 확인한다. 지금 = 2026-11-04(수) 10:00 (Asia/Seoul).
@@ -184,5 +185,16 @@ class RentalCommandServiceTest {
     void 없는_물품명이면_I002() {
         assertThatThrownBy(() -> service().apply(STUDENT_ID, "없는물품", SLOT_ID, TODAY, null))
                 .extracting("errorCode").isEqualTo(ErrorCode.ITEM_NAME_NOT_FOUND);
+    }
+
+    @Test
+    void 탈퇴한_회원은_남은_토큰으로_신청해도_M001() {
+        Student deleted = Student.builder().id(STUDENT_ID).build();
+        ReflectionTestUtils.setField(deleted, "deletedAt", TODAY.atStartOfDay());
+        given(entityManager.find(eq(Student.class), anyString(), eq(LockModeType.PESSIMISTIC_WRITE))).willReturn(deleted);
+
+        assertThatThrownBy(() -> service().apply(STUDENT_ID, "충전기", SLOT_ID, TODAY, null))
+                .extracting("errorCode").isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+        verify(itemRepository, never()).findRentableForUpdate(any(), any());
     }
 }

@@ -98,9 +98,10 @@ public class SlotCommandService {
         }
     }
 
-    // 담당자는 DB의 role이 국장·회장단인 회원만
+    // 담당자는 DB의 role이 국장·회장단인 회원만. 탈퇴한 회원은 없는 회원으로 본다 (M001)
     private Student findManager(String studentId) {
         Student manager = studentRepository.findById(studentId)
+                .filter(student -> !student.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         if (manager.getRole() != StudentRole.DIRECTOR && manager.getRole() != StudentRole.PRESIDENT) {
             throw new BusinessException(ErrorCode.SLOT_MANAGER_NOT_ADMIN);

@@ -18,6 +18,7 @@ import com.mju.nova.backend.semester.domain.Semester;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -101,6 +103,16 @@ class SlotCommandServiceTest {
         given(studentRepository.findById("99999999")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> slotCommandService.create(DayOfWeek.TUE, NOON, ONE_PM, "99999999"))
+                .extracting("errorCode").isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    void 탈퇴한_운영진은_담당자로_지정할_수_없다_M001() {
+        Student deleted = Student.builder().id("60230008").name("탈퇴국장").role(StudentRole.DIRECTOR).build();
+        ReflectionTestUtils.setField(deleted, "deletedAt", LocalDateTime.of(2026, 11, 1, 0, 0));
+        given(studentRepository.findById("60230008")).willReturn(Optional.of(deleted));
+
+        assertThatThrownBy(() -> slotCommandService.create(DayOfWeek.TUE, NOON, ONE_PM, "60230008"))
                 .extracting("errorCode").isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
     }
 

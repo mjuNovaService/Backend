@@ -151,10 +151,11 @@ public class RentalCommandService {
                 .release();
     }
 
-    // StudentRepository(A)에 잠금 조회가 없어 EntityManager로 잠근다. 토큰은 유효한데 회원이 없으면 M001
+    // StudentRepository(A)에 잠금 조회가 없어 EntityManager로 잠근다.
+    // 토큰은 유효한데 회원이 없거나 탈퇴했으면 M001 (탈퇴 후 남은 Access Token은 최대 30분 유효)
     private Student lockStudent(String studentId) {
         Student student = entityManager.find(Student.class, studentId, LockModeType.PESSIMISTIC_WRITE);
-        if (student == null) {
+        if (student == null || student.isDeleted()) {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         }
         return student;
