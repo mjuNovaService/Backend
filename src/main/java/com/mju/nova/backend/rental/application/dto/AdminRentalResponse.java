@@ -14,7 +14,6 @@ public record AdminRentalResponse(
         String studentName,
         String email,
         String phoneNum,
-        String department,
         Long itemId,
         String itemName,
         Integer itemNumber,
@@ -33,9 +32,10 @@ public record AdminRentalResponse(
     public static AdminRentalResponse of(Rent rent, LocalDateTime now) {
         Student student = rent.getStudent();
         return new AdminRentalResponse(rent.getId(), student.getId(), student.getName(), student.getEmail(),
-                student.getPhoneNum(), student.getDepartment(), rent.getItem().getId(), rent.getItem().getName(),
+                student.getPhoneNum(), rent.getItem().getId(), rent.getItem().getName(),
                 rent.getItem().getItemNumber(), rent.getSlot().getId(), rent.getSlot().getManager().getName(),
                 rent.getPickupDate(), rent.getSlot().getStartTime(), rent.getSlot().getEndTime(), rent.getDueAt(),
                 rent.getPurpose(), rent.getStatus(), rent.getReturnedAt(), rent.isOverdue(now), rent.getCreatedAt());
     }
 }
+

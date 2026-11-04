@@ -11,7 +11,6 @@ import com.mju.nova.backend.member.application.dto.MemberApproveResponse;
 import com.mju.nova.backend.member.application.dto.MemberRoleResponse;
 import com.mju.nova.backend.member.domain.ApprovalStatus;
 import com.mju.nova.backend.member.domain.StudentRole;
-import com.mju.nova.backend.member.presentation.dto.MemberApproveRequest;
 import com.mju.nova.backend.member.presentation.dto.MemberRejectRequest;
 import com.mju.nova.backend.member.presentation.dto.MemberRoleChangeRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,16 +73,13 @@ public class MemberAdminController {
     }
 
     @Operation(summary = "승인",
-            description = "승인 대기 회원을 승인하고 안내 메일을 보낸다. department는 선택(보내면 그 값으로 저장, 안 보내면 OCR 값 유지). "
+            description = "승인 대기 회원을 승인하고 안내 메일을 보낸다. Body 없음. "
                     + "보관한 재학증명서는 삭제. 승인 대기가 아니면 409 M006.")
     @PatchMapping("/{studentId}/approve")
     public ApiResponse<MemberApproveResponse> approve(
             @Parameter(hidden = true) @AuthenticationPrincipal LoginStudent loginStudent,
-            @PathVariable String studentId,
-            // Body를 아예 안 보내도 되게 required = false (학과를 바꿀 일이 없으면 빈 요청)
-            @RequestBody(required = false) @Valid MemberApproveRequest request) {
-        String department = (request == null) ? null : request.department();
-        return ApiResponse.success(memberAdminCommandService.approve(loginStudent.studentId(), studentId, department));
+            @PathVariable String studentId) {
+        return ApiResponse.success(memberAdminCommandService.approve(loginStudent.studentId(), studentId));
     }
 
     @Operation(summary = "반려",

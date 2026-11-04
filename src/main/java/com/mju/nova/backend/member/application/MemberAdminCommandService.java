@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.StringUtils;
 
 /**
  * 관리자 회원 승인·반려.
@@ -33,15 +32,12 @@ public class MemberAdminCommandService {
     private final EmailSender emailSender;
     private final TransactionTemplate transactionTemplate;
 
-    public MemberApproveResponse approve(String adminId, String studentId, String department) {
-        // 학과를 빈 글자로 보내면 "안 보낸 것"으로 처리
-        String newDepartment = StringUtils.hasText(department) ? department.trim() : null;
-
+    public MemberApproveResponse approve(String adminId, String studentId) {
         // 1~3. DB 작업 (한 트랜잭션)
         Approval approval = transactionTemplate.execute(tx -> {
             Student student = findPendingStudent(studentId);
             String certificateKey = student.getCertificateImageKey();   // approve()가 비우기 전에 꺼내 둠
-            student.approve(newDepartment);   // 값만 바꾸면 트랜잭션이 끝날 때 변경 감지로 UPDATE
+            student.approve();   // 값만 바꾸면 트랜잭션이 끝날 때 변경 감지로 UPDATE
             return new Approval(student, certificateKey);
         });
         Student student = approval.student();
