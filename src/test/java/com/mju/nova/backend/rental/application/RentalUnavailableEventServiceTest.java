@@ -15,10 +15,11 @@ import com.mju.nova.backend.rental.domain.RentalUnavailableEvent;
 import com.mju.nova.backend.rental.domain.RentalUnavailableEventRepository;
 import com.mju.nova.backend.rental.domain.UnavailableEventCount;
 import com.mju.nova.backend.rental.domain.UnavailableReason;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -31,7 +32,7 @@ class RentalUnavailableEventServiceTest {
 
     @Mock RentalUnavailableEventRepository eventRepository;
     @Mock ItemRepository itemRepository;
-    @Mock CurrentSemesterReader currentSemesterReader;
+    @Mock SemesterQueryService semesterQueryService;
 
     @InjectMocks RentalUnavailableEventService service;
 
@@ -61,7 +62,7 @@ class RentalUnavailableEventServiceTest {
         Semester semester = mock(Semester.class);
         given(semester.getStartDate()).willReturn(LocalDate.of(2026, 9, 1));
         given(semester.getEndDate()).willReturn(LocalDate.of(2026, 12, 21));
-        given(currentSemesterReader.get()).willReturn(semester);
+        given(semesterQueryService.findCurrent()).willReturn(Optional.of(semester));
         given(eventRepository.countByItemNameAndReason(
                 LocalDate.of(2026, 9, 1).atStartOfDay(), LocalDate.of(2026, 12, 22).atStartOfDay()))
                 .willReturn(List.of(
@@ -88,7 +89,7 @@ class RentalUnavailableEventServiceTest {
 
     @Test
     void 기간을_생략했는데_현재_학기가_없으면_SE001() {
-        given(currentSemesterReader.get()).willThrow(new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
+        given(semesterQueryService.findCurrent()).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.summarize(LocalDate.of(2026, 11, 1), null))
                 .extracting("errorCode").isEqualTo(ErrorCode.CURRENT_SEMESTER_NOT_FOUND);
@@ -99,6 +100,6 @@ class RentalUnavailableEventServiceTest {
         var summary = service.summarize(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3));
 
         assertThat(summary.items()).isEmpty();
-        verify(currentSemesterReader, never()).get();
+        verify(semesterQueryService, never()).findCurrent();
     }
 }

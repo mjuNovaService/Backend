@@ -17,8 +17,8 @@ import com.mju.nova.backend.rental.domain.Rent;
 import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -49,7 +49,7 @@ public class RentalQueryService {
     private final RentRepository rentRepository;
     private final RentStatusHistoryRepository rentStatusHistoryRepository;
     private final ItemRepository itemRepository;
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
     private final Clock clock;
 
     // ── 학생 ──
@@ -91,7 +91,7 @@ public class RentalQueryService {
         // semesterId가 없으면 현재 학기. 현재 학기가 없으면 보여줄 대여도 없다
         Optional<Long> semesterId = condition.semesterId() != null
                 ? Optional.of(condition.semesterId())
-                : currentSemesterReader.find().map(Semester::getId);
+                : semesterQueryService.findCurrent().map(Semester::getId);
         if (semesterId.isEmpty()) {
             return PageResponse.of(Page.<Rent>empty(pageable), rent -> AdminRentalResponse.of(rent, now));
         }

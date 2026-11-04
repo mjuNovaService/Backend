@@ -4,8 +4,8 @@ import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
 import com.mju.nova.backend.rental.domain.Item;
 import com.mju.nova.backend.rental.domain.ItemRepository;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
@@ -38,7 +38,7 @@ public class RentalLocalDataInitializer {
     // A의 LocalDataInitializer가 만드는 관리자 테스트 계정 (테스트회장, PRESIDENT)
     private static final String SLOT_MANAGER_ID = "60230003";
 
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
     private final StudentRepository studentRepository;
     private final SlotRepository slotRepository;
     private final ItemRepository itemRepository;
@@ -46,7 +46,7 @@ public class RentalLocalDataInitializer {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void init() {
-        Optional<Semester> semester = currentSemesterReader.find();
+        Optional<Semester> semester = semesterQueryService.findCurrent();
         if (semester.isEmpty()) {
             log.warn("[local] 현재 학기가 없어 대여 테스트 슬롯을 건너뜀");
         } else {

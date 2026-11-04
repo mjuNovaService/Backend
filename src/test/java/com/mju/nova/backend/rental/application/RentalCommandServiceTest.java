@@ -20,8 +20,8 @@ import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistory;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
@@ -60,7 +60,7 @@ class RentalCommandServiceTest {
     @Mock RentStatusHistoryRepository rentStatusHistoryRepository;
     @Mock ItemRepository itemRepository;
     @Mock SlotRepository slotRepository;
-    @Mock CurrentSemesterReader currentSemesterReader;
+    @Mock SemesterQueryService semesterQueryService;
     @Mock EntityManager entityManager;
 
     Semester semester;
@@ -71,7 +71,7 @@ class RentalCommandServiceTest {
         given(semester.getId()).willReturn(1L);
         given(semester.getStartDate()).willReturn(LocalDate.of(2026, 9, 1));
         given(semester.getEndDate()).willReturn(LocalDate.of(2026, 12, 21));
-        given(currentSemesterReader.find()).willReturn(Optional.of(semester));
+        given(semesterQueryService.findCurrent()).willReturn(Optional.of(semester));
 
         givenSlot(DayOfWeek.WED, LocalTime.of(12, 0));
         given(itemRepository.existsByName("충전기")).willReturn(true);
@@ -88,7 +88,7 @@ class RentalCommandServiceTest {
     private RentalCommandService serviceAt(LocalDateTime now) {
         Clock clock = Clock.fixed(now.atZone(SEOUL).toInstant(), SEOUL);
         return new RentalCommandService(rentRepository, rentStatusHistoryRepository, itemRepository,
-                slotRepository, currentSemesterReader, entityManager, clock);
+                slotRepository, semesterQueryService, entityManager, clock);
     }
 
     private RentalCommandService service() {

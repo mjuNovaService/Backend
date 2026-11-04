@@ -7,6 +7,7 @@ import com.mju.nova.backend.member.domain.StudentRepository;
 import com.mju.nova.backend.member.domain.StudentRole;
 import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
 import com.mju.nova.backend.slot.application.dto.AdminSlotResponse;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
@@ -30,13 +31,14 @@ public class SlotCommandService {
     private final SlotRepository slotRepository;
     private final StudentRepository studentRepository;
     private final RentRepository rentRepository;
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
 
     // 학기는 현재 학기, 처음엔 열린 상태. 검사 순서는 명세 8. 수령 시간 등록 처리 규칙 순서 그대로
     public AdminSlotResponse create(DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime,
                                     String managerStudentId) {
         validateTime(startTime, endTime);
-        Semester semester = currentSemesterReader.get();
+        Semester semester = semesterQueryService.findCurrent()
+                .orElseThrow(() -> new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
         Student manager = findManager(managerStudentId);
         if (slotRepository.existsBySemester_IdAndDayOfWeekAndStartTime(semester.getId(), dayOfWeek, startTime)) {
             throw new BusinessException(ErrorCode.DUPLICATE_SLOT);

@@ -8,8 +8,8 @@ import com.mju.nova.backend.rental.domain.RentalUnavailableEvent;
 import com.mju.nova.backend.rental.domain.RentalUnavailableEventRepository;
 import com.mju.nova.backend.rental.domain.UnavailableEventCount;
 import com.mju.nova.backend.rental.domain.UnavailableReason;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -27,7 +27,7 @@ public class RentalUnavailableEventService {
 
     private final RentalUnavailableEventRepository eventRepository;
     private final ItemRepository itemRepository;
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
 
     // 없는 물품명으로 아무 값이나 쌓이지 않게 물품명만 확인한다
     public void record(String itemName, UnavailableReason reason) {
@@ -52,7 +52,8 @@ public class RentalUnavailableEventService {
         LocalDate start = from;
         LocalDate end = to;
         if (start == null || end == null) {
-            Semester semester = currentSemesterReader.get();
+            Semester semester = semesterQueryService.findCurrent()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
             start = start != null ? start : semester.getStartDate();
             end = end != null ? end : semester.getEndDate();
         }
