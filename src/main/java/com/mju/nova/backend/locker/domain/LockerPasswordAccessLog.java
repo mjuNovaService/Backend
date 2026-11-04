@@ -36,4 +36,11 @@ public class LockerPasswordAccessLog extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "viewer_id", nullable = false)
     private Student viewer;
+
+    public static LockerPasswordAccessLog create(LockerAssignment assignment, Student viewer) {
+        LockerPasswordAccessLog log = new LockerPasswordAccessLog();
+        log.assignment = assignment;
+        log.viewer = viewer;
+        return log;
+    }
 }

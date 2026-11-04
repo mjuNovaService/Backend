@@ -42,6 +42,11 @@ public interface LockerAssignmentRepository extends JpaRepository<LockerAssignme
     @Query("select a from LockerAssignment a where a.id = :id")
     Optional<LockerAssignment> findByIdForUpdate(@Param("id") Long id);
 
+    // 회장단 비밀번호 열람. 응답에 사물함 번호·학생 학번이 필요하다
+    @EntityGraph(attributePaths = {"locker", "student"})
+    @Query("select a from LockerAssignment a where a.id = :id")
+    Optional<LockerAssignment> findWithLockerAndStudentById(@Param("id") Long id);
+
     // 관리자 배정 목록. 학기·사물함·학생을 한 번에 가져와 N+1을 막는다 (count 쿼리에는 적용되지 않음)
     @Override
     @EntityGraph(attributePaths = {"semester", "locker", "student"})
