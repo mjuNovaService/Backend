@@ -84,7 +84,19 @@ public enum ErrorCode {
 
     // 학기 (SE). 학기 API를 만드는 A도 같이 사용
     CURRENT_SEMESTER_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "현재 학기가 설정되지 않았습니다"),
-    INVALID_LOCKER_APPLY_PERIOD(HttpStatus.BAD_REQUEST, "SE002", "사물함 신청 시작은 종료보다 빨라야 합니다");
+    INVALID_LOCKER_APPLY_PERIOD(HttpStatus.BAD_REQUEST, "SE002", "사물함 신청 시작은 종료보다 빨라야 합니다"),
+
+    // 사물함 (LC)
+    LOCKER_NOT_FOUND(HttpStatus.NOT_FOUND, "LC001", "사물함을 찾을 수 없습니다"),
+    LOCKER_DISABLED(HttpStatus.BAD_REQUEST, "LC002", "사용할 수 없는 사물함입니다"),
+    LOCKER_APPLY_CLOSED(HttpStatus.BAD_REQUEST, "LC003", "사물함 신청 기간이 아닙니다"),
+    LOCKER_ALREADY_TAKEN(HttpStatus.CONFLICT, "LC004", "이미 배정된 사물함입니다"),
+    LOCKER_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "LC005", "이번 학기에 이미 사용 중인 사물함이 있습니다"),
+    LOCKER_ASSIGNMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "LC006", "사물함 배정 내역을 찾을 수 없습니다"),
+    LOCKER_ASSIGNMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "LC007", "본인의 사물함만 접근할 수 있습니다"),
+    LOCKER_ASSIGNMENT_NOT_IN_USE(HttpStatus.CONFLICT, "LC008", "사용 중인 사물함이 아닙니다"),
+    DUPLICATE_LOCKER_NUMBER(HttpStatus.CONFLICT, "LC009", "이미 등록된 사물함 번호입니다"),
+    LOCKER_IN_USE(HttpStatus.CONFLICT, "LC010", "사용 중인 사물함은 비활성화할 수 없습니다");
 
     private final HttpStatus status;
     private final String code;

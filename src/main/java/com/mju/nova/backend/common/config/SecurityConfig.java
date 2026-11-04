@@ -61,6 +61,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/rentals/unavailable-events").permitAll()
                         // 대여(B): 학생용 대여 API는 로그인 필요 (관리자용 /api/admin/rentals 등은 위 /api/admin/** 규칙)
                         .requestMatchers("/api/rentals/**").authenticated()
+                        // 사물함(B): 사물함 현황(그리드)은 비로그인 공개. 아래 /api/lockers/** 보다 먼저 와야 적용된다
+                        .requestMatchers(HttpMethod.GET, "/api/lockers").permitAll()
+                        // 사물함(B): 신청·내 사물함·비밀번호 수정·반납은 로그인 필요
+                        .requestMatchers("/api/lockers/**").authenticated()
                         // 그 외는 지금 공개. 각 파트가 로그인이 필요한 경로를 위에 authenticated()로 추가함.
                         // (예: 대여 파트는 rental 구현 때 /api/rentals/** 추가 — 통합 명세 v8 12번 시트)
                         .anyRequest().permitAll())

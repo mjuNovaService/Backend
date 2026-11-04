@@ -32,4 +32,21 @@ public class Locker extends BaseEntity {
     // true: 사용 가능, false: 비활성(고장·사용 중지)
     @Column(nullable = false)
     private Boolean lockerStatus;
+
+    // 새 사물함은 사용 가능 상태
+    public static Locker create(String lockerNumber) {
+        Locker locker = new Locker();
+        locker.lockerNumber = lockerNumber;
+        locker.lockerStatus = true;
+        return locker;
+    }
+
+    public boolean isActive() {
+        return Boolean.TRUE.equals(lockerStatus);
+    }
+
+    // 비활성화 조건(현재 학기 사용 중 배정 없음)은 Service가 검사한다
+    public void changeStatus(boolean lockerStatus) {
+        this.lockerStatus = lockerStatus;
+    }
 }
