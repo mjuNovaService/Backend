@@ -45,7 +45,6 @@ public class LocalDataInitializer implements ApplicationRunner {
                 .email(email)
                 .phoneNum(phoneNum)
                 .password(passwordEncoder.encode(TEST_PASSWORD))
-                .department(approvalStatus == ApprovalStatus.APPROVED ? "융합소프트웨어학부" : null)
                 .role(role)
                 .approvalStatus(approvalStatus)
                 .build());

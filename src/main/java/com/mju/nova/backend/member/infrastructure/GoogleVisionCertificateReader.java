@@ -64,7 +64,7 @@ public class GoogleVisionCertificateReader implements CertificateReader {
                 log.info("재학증명서에서 글자를 찾지 못했습니다 (PENDING 처리)");
                 return Optional.empty();
             }
-            return Optional.of(CertificateTextParser.parse(text));
+            return Optional.of(new CertificateInfo(CertificateInfo.normalize(text)));
         } catch (Exception e) {
             // 네트워크 오류, 키 오류, 할당량 초과 등 → 가입은 진행하고 관리자 확인 단계로 넘어감
             log.warn("재학증명서 OCR 실패 (PENDING 처리): {}", e.getMessage());

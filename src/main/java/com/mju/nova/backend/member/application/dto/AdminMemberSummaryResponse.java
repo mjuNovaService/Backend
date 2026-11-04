@@ -13,7 +13,6 @@ public record AdminMemberSummaryResponse(
         String name,
         String email,
         String phoneNum,
-        String department,          // OCR이 읽은 학과. 못 읽었으면 null
         ApprovalStatus approvalStatus,
         StudentRole role,
         LocalDateTime firstLoginAt, // 첫 로그인 시각. null이면 로그인한 적 없음 → 운영진 지정 불가
@@ -25,7 +24,6 @@ public record AdminMemberSummaryResponse(
                 student.getName(),
                 student.getEmail(),
                 student.getPhoneNum(),
-                student.getDepartment(),
                 student.getApprovalStatus(),
                 student.getRole(),
                 student.getFirstLoginAt(),

@@ -43,10 +43,6 @@ public class Student extends BaseEntity implements Persistable<String> {
     @Column(nullable = false, length = 20)
     private String phoneNum;
 
-    // 재학증명서에서 인식한 학과. 못 읽으면 NULL. 관리자가 승인할 때 입력·수정할 수 있음
-    @Column(length = 50)
-    private String department;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StudentRole role;
@@ -69,14 +65,13 @@ public class Student extends BaseEntity implements Persistable<String> {
     // 회원 생성용. 비밀번호는 BCrypt로 해시한 값을 넣는다
     @Builder
     private Student(String id, String name, String email, String password, String phoneNum,
-                    String department, StudentRole role, ApprovalStatus approvalStatus,
+                    StudentRole role, ApprovalStatus approvalStatus,
                     String certificateImageKey, LocalDateTime approvedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.password = password;
         this.phoneNum = phoneNum;
-        this.department = department;
         this.role = role;
         this.approvalStatus = approvalStatus;
         this.certificateImageKey = certificateImageKey;
@@ -101,12 +96,8 @@ public class Student extends BaseEntity implements Persistable<String> {
         return approvalStatus == ApprovalStatus.PENDING;
     }
 
-    // 관리자 승인. department를 보내면 그 값으로 저장(OCR 값 수정), null이면 기존 값 유지.
-    // 보관하던 재학증명서 위치는 비운다 (파일 삭제는 Service가 DB 저장 후에 처리)
-    public void approve(String department) {
-        if (department != null) {
-            this.department = department;
-        }
+    // 관리자 승인. 보관하던 재학증명서 위치는 비운다 (파일 삭제는 Service가 DB 저장 후에 처리)
+    public void approve() {
         this.approvalStatus = ApprovalStatus.APPROVED;
         this.approvedAt = LocalDateTime.now();
         this.certificateImageKey = null;

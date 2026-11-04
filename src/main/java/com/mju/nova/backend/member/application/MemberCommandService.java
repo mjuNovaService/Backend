@@ -97,7 +97,6 @@ public class MemberCommandService {
                 .email(email)
                 .password(passwordEncoder.encode(command.password()))   // BCrypt 해시로 저장
                 .phoneNum(command.phoneNum())
-                .department(certificateInfo.map(CertificateInfo::department).orElse(null))
                 .role(role)
                 .approvalStatus(status)
                 .certificateImageKey(certificateKey)
@@ -121,14 +120,12 @@ public class MemberCommandService {
         return SignupResponse.from(student);
     }
 
-    // 재학증명서에서 단과대 이름 + 이름 확인 (학과는 승인 판정에 쓰지 않고, 읽었는지만 로그로 남김)
+    // 재학증명서에서 단과대 이름 + 이름 확인
     private boolean matchesCertificate(CertificateInfo info, String name) {
         boolean collegeMatched = info.contains(signupProperties.allowedCollege());
         boolean nameMatched = info.contains(name);
-        boolean departmentFound = info.department() != null;
-        // 이름·학과 같은 개인정보는 로그에 남기지 않고, 맞았는지만 저장 (PENDING 원인 확인용)
-        log.info("재학증명서 확인 결과: 대학 일치={}, 이름 일치={}, 학과 인식={}",
-                collegeMatched, nameMatched, departmentFound);
+        // 이름 같은 개인정보는 로그에 남기지 않고, 맞았는지만 저장 (PENDING 원인 확인용)
+        log.info("재학증명서 확인 결과: 대학 일치={}, 이름 일치={}", collegeMatched, nameMatched);
         return collegeMatched && nameMatched;
     }
 
