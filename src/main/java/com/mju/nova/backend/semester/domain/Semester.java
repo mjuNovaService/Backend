@@ -44,4 +44,25 @@ public class Semester extends BaseEntity {
     private LocalDateTime lockerApplyStart;
 
     private LocalDateTime lockerApplyEnd;
+
+    // 새 학기 생성. 만들 때는 현재 학기가 아니다 (markCurrent로 지정)
+    public static Semester create(String name, LocalDate startDate, LocalDate endDate) {
+        Semester semester = new Semester();
+        semester.name = name;
+        semester.startDate = startDate;
+        semester.endDate = endDate;
+        semester.isCurrent = false;
+        return semester;
+    }
+
+    // 현재 학기 지정·해제. 전체에서 1개만 true가 되도록 SemesterCommandService가 순서를 맞춘다
+    public void markCurrent(boolean current) {
+        this.isCurrent = current;
+    }
+
+    // 사물함 신청 기간. 학기 시작 전(방학 중)으로 잡아도 된다
+    public void changeLockerApplyPeriod(LocalDateTime start, LocalDateTime end) {
+        this.lockerApplyStart = start;
+        this.lockerApplyEnd = end;
+    }
 }

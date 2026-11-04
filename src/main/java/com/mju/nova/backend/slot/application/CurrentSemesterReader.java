@@ -18,11 +18,9 @@ public class CurrentSemesterReader {
 
     private final SemesterRepository semesterRepository;
 
-    // TEMP(담당: A): A가 현재 학기 조회를 구현하기로 함. SemesterRepository에 조회 메서드가 없어 findAll()에서 is_current인 학기를 고른다 (학기는 몇 개뿐) / A의 현재 학기 조회 메서드가 나오면 이 메서드 안을 그 호출로 바꾼다
+    // 현재 학기는 SemesterScheduler가 날짜 기준으로 자동으로 맞춘다 (1~6월 그해 1학기, 7~12월 그해 2학기)
     public Optional<Semester> find() {
-        return semesterRepository.findAll().stream()
-                .filter(semester -> Boolean.TRUE.equals(semester.getIsCurrent()))
-                .findFirst();
+        return semesterRepository.findByIsCurrentTrue();
     }
 
     public Semester get() {
