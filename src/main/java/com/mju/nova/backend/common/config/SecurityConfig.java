@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/members/**").authenticated()
                         // 학생회(C): 관리자 API는 국장·회장단만, Q&A는 로그인한 학생만
                         // (학생회 소개·링크 조회 GET /api/infos, /api/links 는 공개라 아래 anyRequest에 걸림)
+                        // 회원(A): 운영진 권한 변경은 회장단만. 위에서부터 먼저 맞는 규칙이 적용돼서 /api/admin/** 보다 위에 둠
+                        .requestMatchers(HttpMethod.PATCH, "/api/admin/members/*/role").hasRole("PRESIDENT")
                         .requestMatchers("/api/admin/**").hasAnyRole("DIRECTOR", "PRESIDENT")
                         .requestMatchers("/api/questions/**").authenticated()
                         // 대여(B): 수령 시간 목록은 비로그인 공개 (대여 신청 화면에서 고르는 목록)

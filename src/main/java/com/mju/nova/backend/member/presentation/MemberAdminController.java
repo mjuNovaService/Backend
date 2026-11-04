@@ -8,13 +8,17 @@ import com.mju.nova.backend.member.application.MemberAdminQueryService;
 import com.mju.nova.backend.member.application.dto.AdminMemberSummaryResponse;
 import com.mju.nova.backend.member.application.dto.CertificateFile;
 import com.mju.nova.backend.member.application.dto.MemberApproveResponse;
+import com.mju.nova.backend.member.application.dto.MemberRoleResponse;
 import com.mju.nova.backend.member.domain.ApprovalStatus;
+import com.mju.nova.backend.member.domain.StudentRole;
 import com.mju.nova.backend.member.presentation.dto.MemberApproveRequest;
 import com.mju.nova.backend.member.presentation.dto.MemberRejectRequest;
+import com.mju.nova.backend.member.presentation.dto.MemberRoleChangeRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -42,13 +46,17 @@ public class MemberAdminController {
     private final MemberAdminCommandService memberAdminCommandService;
 
     @Operation(summary = "회원 목록",
-            description = "status 생략=전체, PENDING=승인 대기, APPROVED=승인 완료. 가입 신청이 오래된 순, size 최대 50. 탈퇴 회원 제외.")
+            description = "status 생략=전체, PENDING=승인 대기, APPROVED=승인 완료. "
+                    + "role 생략=전체, 쉼표로 여러 개 (운영진 목록: role=DIRECTOR,PRESIDENT). "
+                    + "가입 신청이 오래된 순, size 최대 50. 탈퇴 회원 제외.")
     @GetMapping
     public ApiResponse<PageResponse<AdminMemberSummaryResponse>> getMembers(
             @RequestParam(required = false) ApprovalStatus status,
+            // "DIRECTOR,PRESIDENT" 처럼 쉼표로 보내면 Spring이 목록으로 나눠서 넣어 줌
+            @RequestParam(name = "role", required = false) List<StudentRole> roles,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(memberAdminQueryService.getMembers(status, page, size));
+        return ApiResponse.success(memberAdminQueryService.getMembers(status, roles, page, size));
     }
 
     @Operation(summary = "재학증명서 보기",
@@ -88,5 +96,17 @@ public class MemberAdminController {
             @RequestBody @Valid MemberRejectRequest request) {
         memberAdminCommandService.reject(loginStudent.studentId(), studentId, request.reason());
         return ApiResponse.success();
+    }
+
+    @Operation(summary = "권한 변경",
+            description = "회장(PRESIDENT)만. 운영진 지정·인수인계·전임 권한 회수에 사용. "
+                    + "운영진으로 올리려면 1회 이상 로그인한 회원이어야 함(409 M008). 마지막 회장은 내릴 수 없음(409 M009). "
+                    + "같은 권한이면 그대로 성공. 바뀐 권한은 대상의 다음 토큰 재발급부터 적용(최대 30분).")
+    @PatchMapping("/{studentId}/role")
+    public ApiResponse<MemberRoleResponse> changeRole(
+            @Parameter(hidden = true) @AuthenticationPrincipal LoginStudent loginStudent,
+            @PathVariable String studentId,
+            @RequestBody @Valid MemberRoleChangeRequest request) {
+        return ApiResponse.success(memberAdminCommandService.changeRole(loginStudent.studentId(), studentId, request.role()));
     }
 }

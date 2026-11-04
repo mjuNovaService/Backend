@@ -5,8 +5,10 @@ import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.common.mail.EmailSendException;
 import com.mju.nova.backend.common.mail.EmailSender;
 import com.mju.nova.backend.member.application.dto.MemberApproveResponse;
+import com.mju.nova.backend.member.application.dto.MemberRoleResponse;
 import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.member.domain.StudentRepository;
+import com.mju.nova.backend.member.domain.StudentRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -90,11 +92,45 @@ public class MemberAdminCommandService {
         }
     }
 
-    // 승인·반려 공통: 회원이 있고(탈퇴 제외) 승인 대기 중인가
-    private Student findPendingStudent(String studentId) {
-        Student student = studentRepository.findById(studentId)
+    // 운영진 권한 변경 (회장만, SecurityConfig에서 확인). 인수인계도 이 API로 처리
+    //  1. 전임 회장이 신임 운영진에게 권한 부여 → 2. 함께 운영 → 3. 신임 회장이 전임 운영진을 STUDENT로
+    public MemberRoleResponse changeRole(String adminId, String studentId, StudentRole newRole) {
+        return transactionTemplate.execute(tx -> {
+            Student student = findActiveStudent(studentId);
+            StudentRole oldRole = student.getRole();
+
+            // 같은 권한이면 바꿀 것 없이 그대로 성공
+            if (oldRole == newRole) {
+                return MemberRoleResponse.from(student);
+            }
+
+            // 운영진(DIRECTOR·PRESIDENT)으로 올리려면 1회 이상 로그인한 회원이어야 함 (PENDING 회원도 여기서 걸림)
+            if (newRole != StudentRole.STUDENT && !student.hasLoggedIn()) {
+                throw new BusinessException(ErrorCode.STAFF_REQUIRES_LOGIN);
+            }
+
+            // 회장을 내리는데 남은 회장이 이 사람뿐이면 막음 (관리자가 아무도 없게 되는 것 방지)
+            if (oldRole == StudentRole.PRESIDENT
+                    && studentRepository.countByRoleAndDeletedAtIsNull(StudentRole.PRESIDENT) <= 1) {
+                throw new BusinessException(ErrorCode.LAST_PRESIDENT);
+            }
+
+            student.changeRole(newRole);   // 변경 감지로 UPDATE
+            log.info("권한 변경: {} {} → {} (처리: {})", studentId, oldRole, newRole, adminId);
+            return MemberRoleResponse.from(student);
+        });
+    }
+
+    // 회원 조회 (탈퇴 회원은 없는 회원으로)
+    private Student findActiveStudent(String studentId) {
+        return studentRepository.findById(studentId)
                 .filter(s -> !s.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    // 승인·반려 공통: 회원이 있고(탈퇴 제외) 승인 대기 중인가
+    private Student findPendingStudent(String studentId) {
+        Student student = findActiveStudent(studentId);
         if (!student.isPending()) {
             throw new BusinessException(ErrorCode.MEMBER_NOT_PENDING);
         }
