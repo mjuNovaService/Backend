@@ -72,6 +72,11 @@ logging:
 jwt:
   secret: ZNyDorFmM6Os7Mh0iwiW0TvFo3JACcRb5ZOjogT8dXUTjlRMl28mNOq0hzcjwE/z
 
+# 사물함 비밀번호 AES-256 키 (Base64 32바이트)
+# TEMP(담당: 팀): 로컬 전용 고정 키. 실제 서비스에서는 사용 X / 배포 때 환경변수 LOCKER_PASSWORD_KEY에 새 키를 만들어 넣고 팀 비밀 보관소에도 백업
+locker:
+  password-key: fMl21iB14ht50Nzv7GrpqLuLPV5HI6pcECxPVz4cBg4=
+
 ---
 spring:
   config:
@@ -106,6 +111,10 @@ spring:
 # 배포 서버의 환경변수로 받음
 jwt:
   secret: ${JWT_SECRET}
+
+# 사물함 비밀번호 AES-256 키 (Base64 32바이트). 잃어버리거나 바꾸면 저장된 비밀번호를 복호화할 수 없다
+locker:
+  password-key: ${LOCKER_PASSWORD_KEY}
 
 springdoc:
   api-docs:
