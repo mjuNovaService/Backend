@@ -15,8 +15,8 @@ import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistory;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
 import com.mju.nova.backend.rental.domain.RentalDatePolicy;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.Slot;
 import com.mju.nova.backend.slot.domain.SlotRepository;
 import jakarta.persistence.EntityManager;
@@ -43,7 +43,7 @@ public class RentalCommandService {
     private final RentStatusHistoryRepository rentStatusHistoryRepository;
     private final ItemRepository itemRepository;
     private final SlotRepository slotRepository;
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -62,7 +62,7 @@ public class RentalCommandService {
         if (!slot.isOpen()) {
             throw new BusinessException(ErrorCode.SLOT_CLOSED);
         }
-        Semester semester = currentSemesterReader.find()
+        Semester semester = semesterQueryService.findCurrent()
                 .filter(current -> current.getId().equals(slot.getSemester().getId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.SLOT_NOT_IN_CURRENT_SEMESTER));
 

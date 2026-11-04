@@ -9,9 +9,9 @@ import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.RentStatusHistory;
 import com.mju.nova.backend.rental.domain.RentStatusHistoryRepository;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
 import com.mju.nova.backend.semester.domain.SemesterRepository;
-import com.mju.nova.backend.slot.application.CurrentSemesterReader;
 import com.mju.nova.backend.slot.domain.Slot;
 import jakarta.persistence.criteria.Predicate;
 import java.nio.charset.StandardCharsets;
@@ -54,7 +54,7 @@ public class RentalExportService {
     private final RentRepository rentRepository;
     private final RentStatusHistoryRepository rentStatusHistoryRepository;
     private final SemesterRepository semesterRepository;
-    private final CurrentSemesterReader currentSemesterReader;
+    private final SemesterQueryService semesterQueryService;
     private final Clock clock;
 
     public CsvFile export(RentalExportCondition condition) {
@@ -64,7 +64,8 @@ public class RentalExportService {
         // semesterId가 없으면 현재 학기 (없으면 404 SE001). 넘긴 semesterId의 학기가 없으면 헤더만 있는 파일
         Optional<Semester> semester = condition.semesterId() != null
                 ? semesterRepository.findById(condition.semesterId())
-                : Optional.of(currentSemesterReader.get());
+                : Optional.of(semesterQueryService.findCurrent()
+                        .orElseThrow(() -> new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND)));
         // 수령일 오름차순, 같으면 대여 번호 오름차순
         List<Rent> rents = semester
                 .map(target -> rentRepository.findAll(filter(condition, target.getId()), Sort.by("pickupDate", "id")))

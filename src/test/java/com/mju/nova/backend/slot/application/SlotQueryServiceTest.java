@@ -14,6 +14,7 @@ import com.mju.nova.backend.member.domain.Student;
 import com.mju.nova.backend.rental.domain.RentRepository;
 import com.mju.nova.backend.rental.domain.RentStatus;
 import com.mju.nova.backend.rental.domain.SlotReservedCount;
+import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
 import com.mju.nova.backend.slot.domain.DayOfWeek;
 import com.mju.nova.backend.slot.domain.Slot;
@@ -33,7 +34,7 @@ class SlotQueryServiceTest {
 
     @Mock SlotRepository slotRepository;
     @Mock RentRepository rentRepository;
-    @Mock CurrentSemesterReader currentSemesterReader;
+    @Mock SemesterQueryService semesterQueryService;
 
     @InjectMocks SlotQueryService slotQueryService;
 
@@ -41,7 +42,7 @@ class SlotQueryServiceTest {
     void 학생용_슬롯은_요일_다음_시작_시각_순이다() {
         Semester semester = mock(Semester.class);
         given(semester.getId()).willReturn(1L);
-        given(currentSemesterReader.find()).willReturn(Optional.of(semester));
+        given(semesterQueryService.findCurrent()).willReturn(Optional.of(semester));
         // DB가 문자열 순(FRI, MON, TUE)으로 줘도 요일 순으로 정렬돼야 한다
         given(slotRepository.findBySemester_IdAndStatusTrue(1L)).willReturn(List.of(
                 Slot.create(semester, null, DayOfWeek.FRI, LocalTime.of(12, 0), LocalTime.of(13, 0)),
@@ -57,8 +58,7 @@ class SlotQueryServiceTest {
 
     @Test
     void 현재_학기가_없으면_학생용은_빈_목록_관리자용은_SE001() {
-        given(currentSemesterReader.find()).willReturn(Optional.empty());
-        given(currentSemesterReader.get()).willThrow(new BusinessException(ErrorCode.CURRENT_SEMESTER_NOT_FOUND));
+        given(semesterQueryService.findCurrent()).willReturn(Optional.empty());
 
         assertThat(slotQueryService.getOpenSlots()).isEmpty();
         assertThatThrownBy(() -> slotQueryService.getSlots(null))
