@@ -3,8 +3,10 @@ package com.mju.nova.backend.locker.application;
 import com.mju.nova.backend.common.exception.BusinessException;
 import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.locker.application.dto.LockerAssignmentCreateResponse;
+import com.mju.nova.backend.locker.application.dto.LockerCreateResponse;
 import com.mju.nova.backend.locker.application.dto.LockerPasswordChangeResponse;
 import com.mju.nova.backend.locker.application.dto.LockerReturnResponse;
+import com.mju.nova.backend.locker.application.dto.LockerStatusResponse;
 import com.mju.nova.backend.locker.domain.AssignmentStatus;
 import com.mju.nova.backend.locker.domain.Locker;
 import com.mju.nova.backend.locker.domain.LockerApplyPeriod;
@@ -17,13 +19,15 @@ import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 사물함 변경 작업 (Command). 학생의 선착순 신청·비밀번호 수정·반납.
+ * 사물함 변경 작업 (Command). 학생의 선착순 신청·비밀번호 수정·반납, 관리자의 사물함 등록·사용 여부 변경.
  */
 @Service
 @RequiredArgsConstructor
@@ -94,6 +98,46 @@ public class LockerCommandService {
         LockerAssignment assignment = findMyAssignmentForUpdate(studentId, assignmentId);
         assignment.returnLocker(LocalDateTime.now(clock));
         return LockerReturnResponse.from(assignment);
+    }
+
+    // ── 관리자 ──
+
+    /**
+     * 사물함 일괄 등록. 전부 성공 또는 전부 실패: 요청 안 중복이나 기존 번호가 하나라도 있으면 아무것도 저장하지 않고 LC009.
+     * 앞뒤 공백을 잘라서 저장·비교한다. 보낸 순서대로 저장되어 그 순서가 lockerId 순서(목록 순서)가 된다.
+     */
+    public LockerCreateResponse register(List<String> lockerNumbers) {
+        List<String> numbers = lockerNumbers.stream().map(String::trim).toList();
+        if (new HashSet<>(numbers).size() != numbers.size() || lockerRepository.existsByLockerNumberIn(numbers)) {
+            throw new BusinessException(ErrorCode.DUPLICATE_LOCKER_NUMBER);
+        }
+        try {
+            // 다른 관리자가 같은 번호를 동시에 등록하면 UK(uk_locker_locker_number)에 걸린다. 트랜잭션이라 전부 취소
+            List<Locker> saved = lockerRepository.saveAllAndFlush(numbers.stream().map(Locker::create).toList());
+            return new LockerCreateResponse(saved.stream().map(Locker::getId).toList());
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.DUPLICATE_LOCKER_NUMBER);
+        }
+    }
+
+    /**
+     * 사용 여부 변경. 비활성화는 현재 학기 사용 중 배정이 있으면 LC010 (학생이 반납한 뒤 바꾼다).
+     * 신청과 같은 사물함 행을 잠가서, 동시에 들어온 신청과 엇갈려 "비활성인데 사용 중"이 되지 않게 한다.
+     */
+    public LockerStatusResponse changeStatus(Long lockerId, boolean lockerStatus) {
+        Locker locker = lockerRepository.findByIdForUpdate(lockerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOCKER_NOT_FOUND));
+        if (!lockerStatus) {
+            boolean inUse = semesterQueryService.findCurrent()
+                    .map(semester -> lockerAssignmentRepository.existsByLocker_IdAndSemester_IdAndStatus(
+                            lockerId, semester.getId(), AssignmentStatus.IN_USE))
+                    .orElse(false);
+            if (inUse) {
+                throw new BusinessException(ErrorCode.LOCKER_IN_USE);
+            }
+        }
+        locker.changeStatus(lockerStatus);
+        return LockerStatusResponse.from(locker);
     }
 
     // 있는 배정인가? → 내 배정인가? (LC008은 엔티티가 검사)

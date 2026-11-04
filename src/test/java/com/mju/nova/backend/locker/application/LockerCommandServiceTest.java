@@ -6,6 +6,7 @@ import static com.mju.nova.backend.locker.LockerFixtures.STUDENT_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -27,6 +28,7 @@ import com.mju.nova.backend.semester.application.SemesterQueryService;
 import com.mju.nova.backend.semester.domain.Semester;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -315,6 +317,110 @@ class LockerCommandServiceTest {
             given(lockerAssignmentRepository.findByIdForUpdate(40L)).willReturn(Optional.of(previous));
 
             assertThat(service.returnLocker(STUDENT_ID, 40L).status()).isEqualTo(AssignmentStatus.RETURNED);
+        }
+    }
+
+    @Nested
+    class 관리자_등록 {
+
+        @BeforeEach
+        void setUp() {
+            given(lockerRepository.saveAllAndFlush(anyList())).willAnswer(invocation -> {
+                List<Locker> lockers = invocation.getArgument(0);
+                for (int i = 0; i < lockers.size(); i++) {
+                    ReflectionTestUtils.setField(lockers.get(i), "id", 100L + i);
+                }
+                return lockers;
+            });
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void 보낸_순서대로_앞뒤_공백을_잘라_저장한다() {
+            var response = service.register(List.of("103", " 101 ", "A-12"));
+
+            ArgumentCaptor<List<Locker>> saved = ArgumentCaptor.forClass(List.class);
+            verify(lockerRepository).saveAllAndFlush(saved.capture());
+            assertThat(saved.getValue()).extracting(Locker::getLockerNumber).containsExactly("103", "101", "A-12");
+            assertThat(saved.getValue()).allMatch(Locker::isActive);
+            assertThat(response.lockerIds()).containsExactly(100L, 101L, 102L);
+            verify(lockerRepository).existsByLockerNumberIn(List.of("103", "101", "A-12"));
+        }
+
+        @Test
+        void 요청_안에_같은_번호가_있으면_하나도_저장하지_않고_LC009() {
+            assertError(() -> service.register(List.of("101", "102", "101")), ErrorCode.DUPLICATE_LOCKER_NUMBER);
+            assertError(() -> service.register(List.of("101", " 101")), ErrorCode.DUPLICATE_LOCKER_NUMBER);
+            verify(lockerRepository, never()).saveAllAndFlush(anyList());
+        }
+
+        @Test
+        void 이미_등록된_번호가_하나라도_있으면_하나도_저장하지_않고_LC009() {
+            given(lockerRepository.existsByLockerNumberIn(List.of("101", "102"))).willReturn(true);
+
+            assertError(() -> service.register(List.of("101", "102")), ErrorCode.DUPLICATE_LOCKER_NUMBER);
+            verify(lockerRepository, never()).saveAllAndFlush(anyList());
+        }
+
+        @Test
+        void 동시에_같은_번호를_등록해_UK에_걸려도_LC009() {
+            given(lockerRepository.saveAllAndFlush(anyList()))
+                    .willThrow(new DataIntegrityViolationException("uk_locker_locker_number"));
+
+            assertError(() -> service.register(List.of("101")), ErrorCode.DUPLICATE_LOCKER_NUMBER);
+        }
+    }
+
+    @Nested
+    class 관리자_사용_여부_변경 {
+
+        @Test
+        void 현재_학기_사용_중_배정이_있으면_비활성화할_수_없다_LC010() {
+            given(lockerAssignmentRepository.existsByLocker_IdAndSemester_IdAndStatus(
+                    LOCKER_ID, 2L, AssignmentStatus.IN_USE)).willReturn(true);
+
+            assertError(() -> service.changeStatus(LOCKER_ID, false), ErrorCode.LOCKER_IN_USE);
+            assertThat(locker.isActive()).isTrue();
+        }
+
+        @Test
+        void 사용_중_배정이_없으면_비활성화한다() {
+            var response = service.changeStatus(LOCKER_ID, false);
+
+            assertThat(response.lockerStatus()).isFalse();
+            assertThat(response.lockerNumber()).isEqualTo("107");
+            assertThat(locker.isActive()).isFalse();
+        }
+
+        @Test
+        void 지난_학기_미반납만_있으면_비활성화할_수_있다() {
+            given(lockerAssignmentRepository.existsByLocker_IdAndSemester_IdAndStatus(
+                    LOCKER_ID, 1L, AssignmentStatus.IN_USE)).willReturn(true);
+
+            assertThat(service.changeStatus(LOCKER_ID, false).lockerStatus()).isFalse();
+        }
+
+        @Test
+        void 현재_학기가_없으면_사용_중_검사_없이_비활성화한다() {
+            given(semesterQueryService.findCurrent()).willReturn(Optional.empty());
+
+            assertThat(service.changeStatus(LOCKER_ID, false).lockerStatus()).isFalse();
+        }
+
+        @Test
+        void 다시_사용_가능으로_바꿀_때는_검사하지_않는다() {
+            locker.changeStatus(false);
+
+            assertThat(service.changeStatus(LOCKER_ID, true).lockerStatus()).isTrue();
+            verify(lockerAssignmentRepository, never())
+                    .existsByLocker_IdAndSemester_IdAndStatus(anyLong(), anyLong(), any());
+        }
+
+        @Test
+        void 사물함이_없으면_LC001() {
+            given(lockerRepository.findByIdForUpdate(LOCKER_ID)).willReturn(Optional.empty());
+
+            assertError(() -> service.changeStatus(LOCKER_ID, false), ErrorCode.LOCKER_NOT_FOUND);
         }
     }
 }

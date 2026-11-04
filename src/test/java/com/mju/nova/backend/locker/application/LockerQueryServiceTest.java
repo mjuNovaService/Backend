@@ -3,6 +3,7 @@ package com.mju.nova.backend.locker.application;
 import static com.mju.nova.backend.locker.LockerFixtures.NOW;
 import static com.mju.nova.backend.locker.LockerFixtures.STUDENT_ID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -10,7 +11,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.mju.nova.backend.common.exception.ErrorCode;
 import com.mju.nova.backend.locker.LockerFixtures;
+import com.mju.nova.backend.locker.application.dto.AdminLockerResponse;
+import com.mju.nova.backend.locker.application.dto.LockerAssignmentSearchCondition;
 import com.mju.nova.backend.locker.application.dto.LockerBoardResponse;
 import com.mju.nova.backend.locker.application.dto.MyLockerAssignmentResponse;
 import com.mju.nova.backend.locker.domain.AssignmentStatus;
@@ -27,10 +31,15 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -128,5 +137,71 @@ class LockerQueryServiceTest {
                         tuple(41L, true, true),
                         tuple(30L, false, true),
                         tuple(20L, false, false));
+    }
+
+    @Test
+    void 관리자_목록은_그_학기_사용_중_배정자를_붙이고_state로_거른다() {
+        Student student = LockerFixtures.student(STUDENT_ID);
+        LockerAssignment assignment = LockerFixtures.assignment(41L, semester, student,
+                LockerFixtures.locker(1L, "101"), "encrypted");
+        given(lockerAssignmentRepository.findBySemester_IdAndStatus(2L, AssignmentStatus.IN_USE))
+                .willReturn(List.of(assignment));
+
+        List<AdminLockerResponse> all = service.getAdminLockers(null, null);
+        assertThat(all).extracting(AdminLockerResponse::lockerNumber).containsExactly("101", "102", "103", "104");
+        assertThat(all.get(0).assignment().studentId()).isEqualTo(STUDENT_ID);
+        assertThat(all.get(0).assignment().email()).isEqualTo(STUDENT_ID + "@mju.ac.kr");
+        assertThat(all.get(1).assignment()).isNull();
+        assertThat(all.get(2).lockerStatus()).isFalse();
+
+        assertThat(service.getAdminLockers(null, LockerState.AVAILABLE))
+                .extracting(AdminLockerResponse::lockerNumber).containsExactly("102", "104");
+        assertThat(service.getAdminLockers(null, LockerState.DISABLED))
+                .extracting(AdminLockerResponse::lockerNumber).containsExactly("103");
+    }
+
+    @Test
+    void 관리자_목록에서_학기를_생략했는데_현재_학기가_없으면_SE001() {
+        given(semesterQueryService.findCurrent()).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getAdminLockers(null, null))
+                .extracting("errorCode").isEqualTo(ErrorCode.CURRENT_SEMESTER_NOT_FOUND);
+        assertThatThrownBy(() -> service.getAdminAssignments(condition(null, null), 0, 20))
+                .extracting("errorCode").isEqualTo(ErrorCode.CURRENT_SEMESTER_NOT_FOUND);
+    }
+
+    @Test
+    void 관리자_목록에서_없는_학기를_주면_배정_없이_보인다() {
+        given(lockerAssignmentRepository.findBySemester_IdAndStatus(99L, AssignmentStatus.IN_USE))
+                .willReturn(List.of());
+
+        assertThat(service.getAdminLockers(99L, null)).extracting(AdminLockerResponse::state).containsExactly(
+                LockerState.AVAILABLE, LockerState.AVAILABLE, LockerState.DISABLED, LockerState.AVAILABLE);
+    }
+
+    @Test
+    void 배정_목록은_CANCELED로_거르면_C001() {
+        assertThatThrownBy(() -> service.getAdminAssignments(condition(null, AssignmentStatus.CANCELED), 0, 20))
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void 배정_목록은_배정_최신순이고_page_size를_보정한다() {
+        given(lockerAssignmentRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .willAnswer(invocation -> Page.empty(invocation.getArgument(1)));
+
+        var response = service.getAdminAssignments(condition(null, AssignmentStatus.IN_USE), -1, 100);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(lockerAssignmentRepository).findAll(any(Specification.class), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(50);
+        assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "id"));
+        assertThat(response.content()).isEmpty();
+    }
+
+    private LockerAssignmentSearchCondition condition(Long semesterId, AssignmentStatus status) {
+        return new LockerAssignmentSearchCondition(semesterId, status, null);
     }
 }
