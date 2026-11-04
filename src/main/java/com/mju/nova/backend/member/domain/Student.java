@@ -43,7 +43,7 @@ public class Student extends BaseEntity implements Persistable<String> {
     @Column(nullable = false, length = 20)
     private String phoneNum;
 
-    // 재학증명서에서 인식한 학과. 인식 실패 시 관리자가 승인하며 입력
+    // 재학증명서에서 인식한 학과. 못 읽으면 NULL. 관리자가 승인할 때 입력·수정할 수 있음
     @Column(length = 50)
     private String department;
 
@@ -51,19 +51,13 @@ public class Student extends BaseEntity implements Persistable<String> {
     @Column(nullable = false, length = 20)
     private StudentRole role;
 
-    // 인수인계 유예 만료 시각. 지나면 role과 상관없이 STUDENT로 취급
-    private LocalDateTime roleExpiresAt;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ApprovalStatus approvalStatus;
 
-    // 인식 실패한 재학증명서의 S3 경로. 관리자 확인 후 NULL
+    // PENDING 회원의 재학증명서 보관 위치(키). 관리자가 승인·반려하면 파일을 지우고 NULL
     @Column(length = 255)
     private String certificateImageKey;
-
-    @Column(length = 255)
-    private String rejectReason;
 
     private LocalDateTime approvedAt;
 
@@ -100,6 +94,22 @@ public class Student extends BaseEntity implements Persistable<String> {
     // 탈퇴한 회원인가 (소프트 삭제: 행은 남기고 deletedAt만 기록)
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    // 승인 대기 중인가
+    public boolean isPending() {
+        return approvalStatus == ApprovalStatus.PENDING;
+    }
+
+    // 관리자 승인. department를 보내면 그 값으로 저장(OCR 값 수정), null이면 기존 값 유지.
+    // 보관하던 재학증명서 위치는 비운다 (파일 삭제는 Service가 DB 저장 후에 처리)
+    public void approve(String department) {
+        if (department != null) {
+            this.department = department;
+        }
+        this.approvalStatus = ApprovalStatus.APPROVED;
+        this.approvedAt = LocalDateTime.now();
+        this.certificateImageKey = null;
     }
 
     // 첫 로그인 시각 기록. 이미 있으면 덮어쓰지 않음. (인수인계 조건: 1회 이상 로그인한 계정)

@@ -7,9 +7,12 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +33,7 @@ public class LocalCertificateStorage implements CertificateStorage {
     public String store(String studentId, MultipartFile file) {
         // 파일 이름은 원래 이름 대신 무작위(UUID)로: 겹치지 않고, 원래 이름에 든 개인정보도 남기지 않음
         String key = "certificates/%s/%s.%s".formatted(studentId, UUID.randomUUID(), extensionOf(file));
-        Path target = Path.of(properties.certificateDir()).resolve(key).normalize();
+        Path target = resolve(key);
         try (InputStream in = file.getInputStream()) {
             Files.createDirectories(target.getParent());
             Files.copy(in, target);
@@ -42,12 +45,24 @@ public class LocalCertificateStorage implements CertificateStorage {
     }
 
     @Override
+    public Optional<Resource> load(String key) {
+        Path path = resolve(key);
+        // FileSystemResource: 파일을 통째로 메모리에 올리지 않고, 응답할 때 조금씩 읽어서 보냄
+        return Files.isRegularFile(path) ? Optional.of(new FileSystemResource(path)) : Optional.empty();
+    }
+
+    @Override
     public void delete(String key) {
         try {
-            Files.deleteIfExists(Path.of(properties.certificateDir()).resolve(key).normalize());
+            Files.deleteIfExists(resolve(key));
         } catch (IOException e) {
             log.warn("재학증명서 삭제 실패: {}", key, e);
         }
+    }
+
+    // 키 → 실제 파일 경로 (./uploads + certificates/학번/UUID.pdf)
+    private Path resolve(String key) {
+        return Path.of(properties.certificateDir()).resolve(key).normalize();
     }
 
     private String extensionOf(MultipartFile file) {
